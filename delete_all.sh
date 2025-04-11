@@ -2,7 +2,7 @@
 
 SECONDS=0
 
-dirs=(codedeploy codebuild alb permissions network)
+dirs=(codepipeline codedeploy ec2 )
 
 # Change into each directory and execute delete stack script
 for i in "${dirs[@]}"
@@ -11,4 +11,8 @@ do
    (cd $i && ./delete_stack.sh)
    echo .. done deleting $i stack!!!
 done
+
+# Remove all the basic setup 
+(cd ../basic_nw && ./delete_all.sh)
+
 echo "Elapsed Time to delete all stacks: $(($SECONDS / 60)) minutes and $(($SECONDS % 60)) seconds"
