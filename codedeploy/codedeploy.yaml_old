@@ -1,0 +1,145 @@
+Description: "Create CodeDeploy project"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  autoscaleStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: autoscale
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+  myCodeDeployProject: 
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}' 
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+  myDeployGroup: 
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      DeploymentGroupName: mydeploygroup 
+      ApplicationName: !Ref myCodeDeployProject
+      ServiceRoleArn: !GetAtt myCodeDeployRole.Arn 
+      AutoScalingGroups: 
+        - Fn::ImportValue: 
+             Fn::Sub: "${autoscaleStackName}-AUTOSCALE-GROUP"
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+    
+  myCodeDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mycodedeployrole
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: "S3"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+                -
+                  Effect: "Allow"
+                  Action:
+                      - s3:GetObject
+                      - s3:PutObject
+                      - s3:GetObjectVersion
+                  Resource: "*"
+        - PolicyName: "autoscale"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+                -
+                  Effect: "Allow"
+                  Action:
+                      - autoscaling:CompleteLifecycleAction
+                      - autoscaling:DeleteLifecycleHook
+                      - autoscaling:DescribeAutoScalingGroups
+                      - autoscaling:DescribeLifecycleHooks
+                      - autoscaling:PutLifecycleHook
+                      - autoscaling:RecordLifecycleActionHeartbeat
+                      - autoscaling:CreateAutoScalingGroup
+                      - autoscaling:CreateOrUpdateTags
+                      - autoscaling:UpdateAutoScalingGroup
+                      - autoscaling:EnableMetricsCollection
+                      - autoscaling:DescribePolicies
+                      - autoscaling:DescribeScheduledActions
+                      - autoscaling:DescribeNotificationConfigurations
+                      - autoscaling:SuspendProcesses
+                      - autoscaling:ResumeProcesses
+                      - autoscaling:AttachLoadBalancers
+                      - autoscaling:AttachLoadBalancerTargetGroups
+                      - autoscaling:PutScalingPolicy
+                      - autoscaling:PutScheduledUpdateGroupAction
+                      - autoscaling:PutNotificationConfiguration
+                      - autoscaling:PutWarmPool
+                      - autoscaling:DescribeScalingActivities
+                      - autoscaling:DeleteAutoScalingGroup
+                      - ec2:DescribeInstances
+                      - ec2:DescribeInstanceStatus
+                      - ec2:TerminateInstances
+                      - tag:GetResources
+                      - sns:Publish
+                      - cloudwatch:DescribeAlarms
+                      - cloudwatch:PutMetricAlarm
+                      - elasticloadbalancing:DescribeLoadBalancerAttributes
+                      - elasticloadbalancing:DescribeTargetGroupAttributes
+                      - elasticloadbalancing:DescribeLoadBalancers
+                      - elasticloadbalancing:DescribeInstanceHealth
+                      - elasticloadbalancing:RegisterInstancesWithLoadBalancer
+                      - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+                      - elasticloadbalancing:DescribeTargetGroups
+                      - elasticloadbalancing:DescribeTargetHealth
+                      - elasticloadbalancing:RegisterTargets
+                      - elasticloadbalancing:DeregisterTargets
+                  Resource: "*"
+
+
+Outputs:
+  CodeDeployRole:
+    Value: !Ref myCodeDeployRole
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-DEPLOY-ROLE"
+
+  CodeDeployGroup:
+    Value: !Ref myDeployGroup
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-DEPLOY-GROUP"
+

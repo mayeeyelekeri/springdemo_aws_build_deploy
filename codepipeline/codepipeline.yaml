@@ -1,0 +1,236 @@
+Description: "Create codepipeline project"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  autoscaleStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: autoscale
+
+  codebuildStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: codebuild
+
+  codedeployStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: codedeploy
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+  projectName: 
+    Type: String 
+    Default: mycodepipeline
+
+Resources:
+  codepipelineBucket:
+    Description: "Create S3 bucket for storing codepipeline artifacts"
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codepipeline/bucket_prefix}}', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]] ]]
+      
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "bucket "] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+
+  SampleCloudFormationCodePipelineProject:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn: codepipelineBucket
+    Properties:
+      Name: SpringDemoCodePipeline
+      RoleArn: !GetAtt SampleCloudFormationCodePipelineServiceRole.Arn
+      Stages:
+        - Name: SourceStage
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: "1"
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                Owner: !Sub '{{resolve:ssm:/${environment}/codepipeline/git_owner}}'
+                Repo: !Sub '{{resolve:ssm:/${environment}/codepipeline/git_repo}}'
+                Branch: main
+                OAuthToken: !Sub '{{resolve:ssm:/${environment}/codepipeline/git_token}}'
+              RunOrder: 1
+        - Name: BackendStagingBuildStage
+          Actions:
+            - Name: BackendStagingBuildAction
+              InputArtifacts:
+                - Name: SourceOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              OutputArtifacts:
+                - Name: BuildBackendStagingArtifact
+              Configuration:
+                ProjectName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              RunOrder: 1
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CodeDeploy
+                Version: '1'
+              Configuration:
+                ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+                DeploymentGroupName: 
+                  Fn::ImportValue: 
+                     Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
+              InputArtifacts:
+                - Name: BuildBackendStagingArtifact
+      ArtifactStore:
+        Location: !Ref codepipelineBucket
+        Type: S3
+
+  SampleCloudFormationCodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub ${projectName}-codepipeline-base-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - elasticbeanstalk:*
+                  - ec2:*
+                  - elasticloadbalancing:*
+                  - autoscaling:*
+                  - cloudwatch:*
+                  - s3:*
+                  - sns:*
+                  - cloudformation:*
+                  - rds:*
+                  - sqs:*
+                  - ecs:*
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:UploadArchive
+                  - codecommit:CancelUploadArchive
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - codedeploy:CreateDeployment
+                  - codedeploy:GetApplicationRevision
+                  - codedeploy:GetDeployment
+                  - codedeploy:GetDeploymentConfig
+                  - codedeploy:RegisterApplicationRevision
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - iam:PassRole
+                Resource: "*"
+                Effect: Allow
+                Condition:
+                  StringEqualsIfExists:
+                    iam:PassedToService:
+                      - cloudformation.amazonaws.com
+                      - elasticbeanstalk.amazonaws.com
+                      - ec2.amazonaws.com
+                      - ecs-tasks.amazonaws.com
+              - Action:
+                  - lambda:InvokeFunction
+                  - lambda:ListFunctions
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - opsworks:CreateDeployment
+                  - opsworks:DescribeApps
+                  - opsworks:DescribeCommands
+                  - opsworks:DescribeDeployments
+                  - opsworks:DescribeInstances
+                  - opsworks:DescribeStacks
+                  - opsworks:UpdateApp
+                  - opsworks:UpdateStack
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - devicefarm:ListProjects
+                  - devicefarm:ListDevicePools
+                  - devicefarm:GetRun
+                  - devicefarm:GetUpload
+                  - devicefarm:CreateUpload
+                  - devicefarm:ScheduleRun
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - servicecatalog:ListProvisioningArtifacts
+                  - servicecatalog:CreateProvisioningArtifacts
+                  - servicecatalog:DescribeProvisioningArtifacts
+                  - servicecatalog:DeleteProvisioningArtifacts
+                  - servicecatalog:UpdateProduct
+                Resource: "*"
+                Effect: Allow
+              - Action:
+                  - ecr:DescribeImages
+                Resource: "*"
+                Effect: Allow
+        - PolicyName: !Sub ${projectName}-ssm-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - "*"
+                Action:
+                  - ssm:DescribeParameters
+              - Effect: Allow
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+                Action:
+                  - ssm:GetParameters
+
+Outputs:
+  CodePipelineBucket:
+    Value: !Ref codepipelineBucket
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-CODEPIPELINE-BUCKET"
