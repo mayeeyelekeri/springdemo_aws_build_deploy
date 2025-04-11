@@ -1,5 +1,5 @@
 SECONDS=0
-aws cloudformation create-stack --stack-name ec2 --template-body file://ec2-init.yaml  --capabilities CAPABILITY_NAMED_IAM $*
+aws cloudformation create-stack --stack-name ec2 --template-body file://ec2.yaml  --capabilities CAPABILITY_NAMED_IAM $*
 
 aws cloudformation wait stack-create-complete --stack-name ec2
 
