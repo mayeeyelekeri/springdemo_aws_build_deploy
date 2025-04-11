@@ -23,39 +23,6 @@ Conditions:
     !Equals [ !Ref environment, "dev" ] 
 
 Resources:
-  ec2InstanceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: ec2InstanceRole
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: s3accesspolicy
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:GetObjectVersion
-                Resource: '*'
-
-  ec2InstanceProfile:
-    Description: "NUTS" 
-    Type: AWS::IAM::InstanceProfile 
-    Properties: 
-      Path: "/" 
-      Roles: 
-        - 
-          Ref: ec2InstanceRole 
-
   publicInstance:                                                                
     Description: "Open to public access, on http port 80"                        
     Type: AWS::EC2::Instance                                                     
@@ -65,7 +32,9 @@ Resources:
      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'                 
      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
-     IamInstanceProfile: !Ref ec2InstanceProfile                                    
+     IamInstanceProfile: 
+       Fn::ImportValue:                                                        
+         Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE"                                    
      SecurityGroupIds:                                                          
         - Fn::ImportValue:                                                      
            Fn::Sub: "${permStackName}-PUBLIC-SG"                                
