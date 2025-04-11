@@ -104,14 +104,14 @@ Resources:
       Stages:
         - Name: SourceStage
           Actions:
-            - Name: SourceAction
+            - Name: GetSource
               ActionTypeId:
                 Category: Source
                 Owner: ThirdParty
                 Provider: GitHub
                 Version: "1"
               OutputArtifacts:
-                - Name: SourceOutput
+                - Name: sourceoutput
               Configuration:
                 Owner: '{{resolve:secretsmanager:git_creds:SecretString:username}}'
                 
@@ -121,21 +121,21 @@ Resources:
                 Branch: main
                 OAuthToken: '{{resolve:secretsmanager:git_creds:SecretString:token}}'
               RunOrder: 1
-        - Name: BackendStagingBuildStage
+        - Name: BuildStage
           Actions:
-            - Name: BackendStagingBuildAction
+            - Name: Build
               InputArtifacts:
-                - Name: SourceOutput
+                - Name: sourceoutput
               ActionTypeId:
                 Category: Build
                 Owner: AWS
                 Provider: CodeBuild
                 Version: "1"
               OutputArtifacts:
-                - Name: BuildBackendStagingArtifact
+                - Name: buildartifacts
               Configuration:
                 ProjectName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
-        - Name: Deploy
+        - Name: DeployStage
           Actions:
             - Name: Deploy
               RunOrder: 1
@@ -150,7 +150,7 @@ Resources:
                   Fn::ImportValue: 
                      Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
               InputArtifacts:
-                - Name: BuildBackendStagingArtifact
+                - Name: buildartifacts
       ArtifactStore:
         Location: !Ref codepipelineBucket
         Type: S3
