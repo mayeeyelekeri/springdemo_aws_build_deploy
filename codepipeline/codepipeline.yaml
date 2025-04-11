@@ -1,3 +1,15 @@
+# File: codepipeline.yaml 
+# This module creates codepipeline project and roles 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
+# and "Secrets manager" values 
+#
+# Resource that would be created
+# 1) CodePipeline S3 bucket for storing artifacts   
+# 2) CodePipeline project 
+# 3) CodePipeline Service Role 
+# 
+
 Description: "Create codepipeline project"
 
 Parameters: 
@@ -43,6 +55,12 @@ Parameters:
     Default: mycodepipeline
 
 Resources:
+  # 
+  # Create CodePipeline bucket for storing artifacts     
+  # Inputs: 
+  #  1) Bucket prefix (from Parameter store)  
+  #  2) StackID (get only the last part of the stack id, after splitting by "-" and "/")
+  #
   codepipelineBucket:
     Description: "Create S3 bucket for storing codepipeline artifacts"
     Type: AWS::S3::Bucket
@@ -54,15 +72,35 @@ Resources:
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "bucket"] ]
        - Key: Environment
          Value: !Sub ${environment}	
-
+  # 
+  # Create CodePipeline Project with 3 stages - source, build and deploy      
+  # Inputs: 
+  #  1) Code Pipeline Role arn  
+  #  2) GitHub specific 
+  #  2.a) GitHub repo name (last part only, from parameter store)
+  #  2.b) GitHub user name (from Secrets manager)
+  #  2.c) GitHub OAuth token (from Secrets manager)
+  #  2.d) Artifact Storage location (need this info in CodeDeploy)
+  # 
+  #  3) CodeBuild specific 
+  #  3.a) Application name (from parameter store)
+  # 
+  #  4) CodeDeploy specific 
+  #  3.a) Application name (from parameter store)
+  #  3.b) DeploymentGroup name 
+  #  3.c) Artifact Storage location (from CodeBuild)
+  # 
+  #  5) CodePipeline bucket reference 
+  #  6) storage as S3 
+  #
   pipelineProject:
     Type: AWS::CodePipeline::Pipeline
     DependsOn: codepipelineBucket
     Properties:
       Name: SpringDemoCodePipeline
-      RoleArn: 
-        Fn::ImportValue: 
-            Fn::Sub: "${codedeployStackName}-PIPELINE-SERVICE-ROLE-ARN"
+      RoleArn: !GetAtt pipelineServiceRole.Arn
+      #  Fn::ImportValue: 
+      #      Fn::Sub: "${codedeployStackName}-PIPELINE-SERVICE-ROLE-ARN"
       Stages:
         - Name: SourceStage
           Actions:
@@ -117,6 +155,95 @@ Resources:
         Location: !Ref codepipelineBucket
         Type: S3
 
+  # Create CodeDeploy Service Role
+  pipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}', codepipeline-base-policy ]]
+          PolicyDocument:
+           Version: 2012-10-17
+           Statement:
+            - Action:
+                - elasticbeanstalk:*
+                - ec2:*
+                - elasticloadbalancing:*
+                - autoscaling:*
+                - cloudwatch:*
+                - s3:*
+                - sns:*
+                - cloudformation:*
+                - rds:*
+                - ecs:*
+              Resource: "*"
+              Effect: Allow
+            - Action:
+                - codecommit:GetBranch
+                - codecommit:GetCommit
+                - codecommit:GetUploadArchiveStatus
+                - codecommit:UploadArchive
+                - codecommit:CancelUploadArchive
+              Resource: "*"
+              Effect: Allow
+            - Action:
+                - codedeploy:CreateDeployment
+                - codedeploy:GetApplicationRevision
+                - codedeploy:GetDeployment
+                - codedeploy:GetDeploymentConfig
+                - codedeploy:RegisterApplicationRevision
+              Resource: "*"
+              Effect: Allow
+            - Action:
+                - codebuild:BatchGetBuilds
+                - codebuild:StartBuild
+              Resource: "*"
+              Effect: Allow
+            - Action:
+                - iam:PassRole
+              Resource: "*"
+              Effect: Allow
+              Condition:
+                StringEqualsIfExists:
+                  iam:PassedToService:
+                    - cloudformation.amazonaws.com
+                    - elasticbeanstalk.amazonaws.com
+                    - ec2.amazonaws.com
+                    - ecs-tasks.amazonaws.com
+            - Action:
+                - lambda:InvokeFunction
+                - lambda:ListFunctions
+              Resource: "*"
+              Effect: Allow
+            - Action:
+                - ecr:DescribeImages
+              Resource: "*"
+              Effect: Allow
+              
+        # Policy to access Parameter Store 
+        - PolicyName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}', ssm-policy ]]
+          PolicyDocument:
+           Version: 2012-10-17
+           Statement:
+            - Effect: Allow
+              Resource:
+                - "*"
+              Action:
+                - ssm:DescribeParameters
+            - Effect: Allow
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+              Action:
+                - ssm:GetParameters
 Outputs:
   CodePipelineBucket:
     Value: !Ref codepipelineBucket

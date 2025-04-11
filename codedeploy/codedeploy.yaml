@@ -1,4 +1,16 @@
-Description: "Create CodeDeploy project"
+# File: codedeploy.yaml 
+# This module creates codedeploy project and roles 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
+# and "Secrets manager" values 
+#
+# Resource that would be created
+# 1) CodeDeploy project  
+# 2) CodeDeploy Deployment group 
+# 3) CodeDeploy Service Role 
+# 
+
+Description: "Create CodeDeploy project and deployment group"
 
 Parameters: 
   networkStackName:
@@ -29,6 +41,11 @@ Parameters:
       - prod 
 
 Resources:
+  # Create CodeDeploy Application    
+  # Inputs: 
+  #  From Parameter store
+  #  1) codedeploy application name  
+  # 
   myCodeDeployProject: 
     Type: AWS::CodeDeploy::Application
     Properties: 
@@ -39,6 +56,12 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}
 
+  # Create CodeDeploy Deployment group ]    
+  # Inputs: 
+  # 1) codedeploy application reference
+  # 2) codedeploy service role reference 
+  # 3) EC2 tag name 
+  # 
   myDeployGroup: 
     Type: AWS::CodeDeploy::DeploymentGroup
     Properties: 
@@ -57,7 +80,8 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}
 
-    
+  # Create CodeDeploy Service Role    
+  #   
   myCodeDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -132,122 +156,6 @@ Resources:
                       - elasticloadbalancing:DeregisterTargets
                   Resource: "*"
 
-# 
-  pipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codepipeline.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}', codepipeline-base-policy ]]
-          PolicyDocument:
-           Version: 2012-10-17
-           Statement:
-            - Action:
-                - elasticbeanstalk:*
-                - ec2:*
-                - elasticloadbalancing:*
-                - autoscaling:*
-                - cloudwatch:*
-                - s3:*
-                - sns:*
-                - cloudformation:*
-                - rds:*
-                - sqs:*
-                - ecs:*
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - codecommit:GetBranch
-                - codecommit:GetCommit
-                - codecommit:GetUploadArchiveStatus
-                - codecommit:UploadArchive
-                - codecommit:CancelUploadArchive
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - codedeploy:CreateDeployment
-                - codedeploy:GetApplicationRevision
-                - codedeploy:GetDeployment
-                - codedeploy:GetDeploymentConfig
-                - codedeploy:RegisterApplicationRevision
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - codebuild:BatchGetBuilds
-                - codebuild:StartBuild
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - iam:PassRole
-              Resource: "*"
-              Effect: Allow
-              Condition:
-                StringEqualsIfExists:
-                  iam:PassedToService:
-                    - cloudformation.amazonaws.com
-                    - elasticbeanstalk.amazonaws.com
-                    - ec2.amazonaws.com
-                    - ecs-tasks.amazonaws.com
-            - Action:
-                - lambda:InvokeFunction
-                - lambda:ListFunctions
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - opsworks:CreateDeployment
-                - opsworks:DescribeApps
-                - opsworks:DescribeCommands
-                - opsworks:DescribeDeployments
-                - opsworks:DescribeInstances
-                - opsworks:DescribeStacks
-                - opsworks:UpdateApp
-                - opsworks:UpdateStack
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - devicefarm:ListProjects
-                - devicefarm:ListDevicePools
-                - devicefarm:GetRun
-                - devicefarm:GetUpload
-                - devicefarm:CreateUpload
-                - devicefarm:ScheduleRun
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - servicecatalog:ListProvisioningArtifacts
-                - servicecatalog:CreateProvisioningArtifacts
-                - servicecatalog:DescribeProvisioningArtifacts
-                - servicecatalog:DeleteProvisioningArtifacts
-                - servicecatalog:UpdateProduct
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - ecr:DescribeImages
-              Resource: "*"
-              Effect: Allow
-        - PolicyName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}', ssm-policy ]]
-          PolicyDocument:
-           Version: 2012-10-17
-           Statement:
-            - Effect: Allow
-              Resource:
-                - "*"
-              Action:
-                - ssm:DescribeParameters
-            - Effect: Allow
-              Resource:
-                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
-              Action:
-                - ssm:GetParameters
 Outputs:
   CodeDeployRole:
     Value: !Ref myCodeDeployRole
@@ -260,16 +168,3 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-DEPLOY-GROUP"
-# 
-  CodePipelineServiceRole:
-    Value: !Ref pipelineServiceRole
-    Export:
-      "Name" :
-        Fn::Sub: "${AWS::StackName}-PIPELINE-SERVICE-ROLE"
-
-# 
-  CodePipelineServiceRoleArn:
-    Value: !GetAtt pipelineServiceRole.Arn
-    Export:
-      "Name" :
-        Fn::Sub: "${AWS::StackName}-PIPELINE-SERVICE-ROLE-ARN"
