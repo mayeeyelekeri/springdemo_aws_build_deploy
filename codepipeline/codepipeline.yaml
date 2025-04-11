@@ -55,12 +55,12 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}	
 
-  SampleCloudFormationCodePipelineProject:
+  pipelineProject:
     Type: AWS::CodePipeline::Pipeline
     DependsOn: codepipelineBucket
     Properties:
       Name: SpringDemoCodePipeline
-      RoleArn: !GetAtt SampleCloudFormationCodePipelineServiceRole.Arn
+      RoleArn: !GetAtt pipelineServiceRole.Arn
       Stages:
         - Name: SourceStage
           Actions:
@@ -112,7 +112,7 @@ Resources:
         Location: !Ref codepipelineBucket
         Type: S3
 
-  SampleCloudFormationCodePipelineServiceRole:
+  pipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
       Path: /
