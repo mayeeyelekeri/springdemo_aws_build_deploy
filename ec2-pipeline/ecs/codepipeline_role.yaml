@@ -1,0 +1,121 @@
+Resources:
+  CodePipelineBuildActionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+        Version: '2012-10-17'
+  CodePipelineBuildActionRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - codebuild:StopBuild
+            Effect: Allow
+            Resource: "*"
+        Version: '2012-10-17'
+      PolicyName: CodePipelineBuildActionRoleDefaultPolicy
+      Roles:
+        - !Ref CodePipelineBuildActionRole
+        
+# 
+  CodePipelineDeployActionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+        Version: '2012-10-17'
+
+  CodePipelineDeployActionRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - ecs:DescribeServices
+              - ecs:DescribeTaskDefinition
+              - ecs:DescribeTasks
+              - ecs:ListTasks
+              - ecs:RegisterTaskDefinition
+              - ecs:TagResource
+              - ecs:UpdateService
+            Effect: Allow
+            Resource: '*'
+          - Action: iam:PassRole
+            Condition:
+              StringEqualsIfExists:
+                iam:PassedToService:
+                  - ec2.amazonaws.com
+                  - ecs-tasks.amazonaws.com
+            Effect: Allow
+            Resource: '*'
+          - Action:
+              - s3:GetBucket*
+              - s3:GetObject*
+              - s3:List*
+            Effect: Allow
+            Resource: "*"
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource: "*"
+        Version: '2012-10-17'
+      PolicyName: CodePipelineDeployActionRoleDefaultPolicy
+      Roles:
+        - !Ref CodePipelineDeployActionRole
+       
+# 
+# 
+# CodePipeline role 
+# - S3 full access 
+# 
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+      Policies:
+       - PolicyName: CodePipelineRoleDefaultPolicy
+         PolicyDocument: 
+           Version: '2012-10-17'
+           Statement:
+             - 
+               Effect: "Allow"
+               Action:
+                - s3:Abort*
+                - s3:DeleteObject*
+                - s3:GetBucket*
+                - s3:GetObject*
+                - s3:List*
+                - s3:PutObject
+                - s3:PutObjectLegalHold
+                - s3:PutObjectRetention
+                - s3:PutObjectTagging
+                - s3:PutObjectVersionTagging
+               Resource: "*"
+             -
+              Effect: "Allow"                 
+              Action: sts:AssumeRole
+              Resource:
+                - !GetAtt CodePipelineBuildActionRole.Arn
+                - !GetAtt CodePipelineDeployActionRole.Arn
+                
+
+  

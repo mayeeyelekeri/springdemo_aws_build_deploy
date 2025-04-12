@@ -1,0 +1,171 @@
+Description: "Spinup few servers for testing"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+  ec2WaitCondition: 
+    Type: AWS::CloudFormation::WaitCondition
+    CreationPolicy: 
+      ResourceSignal:
+        Timeout: PT15M
+
+  publicInstance:
+    Description: "Open to public access, on http port 80"
+    Type: AWS::EC2::Instance
+    Metadata:
+      Comment1: Install docker and codedeploy agent 
+      "AWS::CloudFormation::Init":
+        configSets:
+          setup:
+            - install_docker
+            - install_codedeploy_agent 
+        install_docker:
+          packages:
+            yum:
+              docker: []
+          commands:
+            create_user: 
+              command: "usermod -a -G docker ec2-user"
+          services:
+            sysvinit:
+              docker:
+                enabled: true
+                ensureRunning: true
+        install_codedeploy_agent:
+          packages:
+            yum:
+              ruby: []
+          commands:
+            download: 
+              command: "wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install && chmod a+x ./install && ./install auto -v releases/codedeploy-agent-1.4.1-2244.noarch.rpm"
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'
+      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'
+      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+      SecurityGroupIds:
+         - Fn::ImportValue:
+            Fn::Sub: "${permStackName}-PUBLIC-SG" 
+      SubnetId:
+         Fn::ImportValue:
+            Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      UserData:
+        Fn::Base64:
+          !Sub | 
+            #!/bin/bash -xe
+            yum update -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource publicInstance --configsets setup --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ec2WaitCondition --region ${AWS::Region}
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Public Instance "] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+         
+  publicInstance3:
+    Description: "Httpd web server, on http port 80"
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'
+      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'
+      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+      SecurityGroupIds:
+         - Fn::ImportValue:
+            Fn::Sub: "${permStackName}-PUBLIC-SG" 
+      SubnetId:
+         Fn::ImportValue:
+            Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Public Instance 3"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+         
+
+  publicInstance2:
+    Description: "Httpd web server, on http port 80"
+    Type: AWS::EC2::Instance
+    CreationPolicy: 
+      ResourceSignal:
+        Timeout: PT15M
+    Metadata:
+      Comment1: Install Httpd 
+      "AWS::CloudFormation::Init":
+        configSets:
+          setup:
+            - install_httpd 
+        install_httpd:
+          packages:
+            yum:
+              httpd: []
+          files: 
+            "/var/www/html/index.html": 
+              content: |
+                <h2> Hello world from server $(hostname -f) </h2>
+                 This file was created using cfn-init 
+          commands:
+            simple_test: 
+              command: "echo just verifying commands section"
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'
+      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'
+      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+      SecurityGroupIds:
+         - Fn::ImportValue:
+            Fn::Sub: "${permStackName}-PUBLIC-SG" 
+      SubnetId:
+         Fn::ImportValue:
+            Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      UserData:
+        Fn::Base64:
+          !Sub | 
+            #!/bin/bash -xe
+            yum update -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource publicInstance2 --configsets setup --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstance2 --region ${AWS::Region}
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Public Instance 2"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+         
+Outputs:
+  PublicInstance:
+    Value: !Ref publicInstance
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-PUBLIC-INSTANCE"
+

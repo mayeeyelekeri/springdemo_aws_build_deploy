@@ -1,0 +1,204 @@
+# File: ecs-part2.yaml 
+# This module create all the ECS related items
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
+# And also creates an ECR repository 
+# And uploades existing docker image "springdemo" onto ECR 
+# And make sure both the Network and Permissions modules are created 
+#
+# Resource that would be created
+# 1) ECS Cluster 
+# 2) ECS Task Definition  
+# 3) ECS Service 
+# 4) ECS Role 
+# 
+
+Description: "ECS Cluster and springdemo application"
+
+Parameters: 
+  networkStackName:
+    Description: Network stack
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Permissions stack
+    Type: String
+    Default: perm
+    
+  albStackName:
+    Description: ALB stack 
+    Type: String
+    Default: alb
+
+  ecsPart1StackName:
+    Description: ECS Part1 stack 
+    Type: String
+    Default: ecs-part1
+          
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+        
+Conditions: 
+  createOnlyProdResources: 
+    !Equals [ !Ref environment, "dev" ] 
+
+Resources:
+    
+  # Create an ECS Cluster  
+  # Inputs: 
+  #  From Parameter store
+  #  1) Cluster Name  
+  #  
+  #  Other things to consider: 
+  #   1) Make sure to select FARGATE 
+  #   2) Enable Container Insights 
+  #   
+  myEcsCluster:                                                                
+    Description: "New ECS Cluster"                        
+    Type: AWS::ECS::Cluster
+    Properties:                                                                  
+     ClusterName: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}'              
+     CapacityProviders: 
+       - FARGATE
+     ClusterSettings: 
+       - Name: containerInsights
+         Value: enabled 
+     Tags:
+       - Key: Name
+         Value: !Join ["-", [Fn::Sub: "${AWS::StackName}", "ECSCluster"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+  # Create an ECS Task Definition, basically memory configution, cpu config etc   
+  # Inputs: 
+  #  From Parameter store
+  #  1) Task Name 
+  #  2) Docker Image location (repository path)  
+  #  3) ECS Role, which is a reference 
+  # 
+  #  Other things to consider: 
+  #   1) Make sure to select FARGATE 
+  #   2) Enable Container Insights 
+  #   3) Container Port
+  # 
+  myEcsTaskDefinition: 
+    Description: "ECS task definition" 
+    Type: AWS::ECS::TaskDefinition
+    Properties:                                                                  
+     Family: !Sub '{{resolve:ssm:/${environment}/ecs/task_name}}'
+     RequiresCompatibilities: 
+       - FARGATE
+     ExecutionRoleArn: 
+         Fn::ImportValue: 
+             Fn::Sub: "${ecsPart1StackName}-ECS-ROLE-ARN"
+     Memory: 3 GB
+     Cpu: 1 vCPU 
+     NetworkMode: awsvpc
+     ContainerDefinitions: 
+       - Name: !Sub '{{resolve:ssm:/${environment}/ecs/container_name}}'
+         Image: !Sub '{{resolve:ssm:/${environment}/ecs/ecr_repository}}'
+         PortMappings: 
+           - ContainerPort: 80
+             Protocol: tcp 
+         Environment: 
+            - Name: WELCOME_MESSAGE
+              Value: "this is message from the stack"
+            - Name: IP_ADDRESS
+              Value: "10.0.0.0"
+
+     Tags:
+       - Key: Name
+         Value: !Join ["-", [Fn::Sub: "${AWS::StackName} ", "Task"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+  # Create an ECS Service   
+  # Inputs: 
+  #  From Parameter store
+  #  1) Cluster reference  
+  #  2) Task Definition reference   
+  #  3) ECS Role, which is a reference 
+  #  4) Service Name 
+  # 
+  #  Other things to consider: 
+  #   1) Make sure to select FARGATE 
+  #   2) Assign Public IP is enabled  
+  #   3) Container Port
+  # 
+  #   4) Security Group information from the "permissions" stack
+  #   5) Public Subnet 1 information from the "network" stack 
+  #   6) ALB Target Group reference from the "alb" stack 
+  # 
+  myEcsService:
+    Type: 'AWS::ECS::Service'
+    DependsOn: myEcsCluster
+    Properties:
+      ServiceName: !Sub '{{resolve:ssm:/${environment}/ecs/service_name}}'  
+      Cluster: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}' 
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      CapacityProviderStrategy:
+            - CapacityProvider: FARGATE
+              Base: 0
+              Weight: 1
+      AvailabilityZoneRebalancing: ENABLED
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Fn::ImportValue: 
+               Fn::Sub: "${permStackName}-PUBLIC-SG"
+          Subnets:
+            - Fn::ImportValue: 
+               Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+            - Fn::ImportValue: 
+               Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
+               
+      LoadBalancers: 
+        - ContainerName: !Sub '{{resolve:ssm:/${environment}/ecs/container_name}}'
+          ContainerPort: 80
+          LoadBalancerName:
+             Ref: "AWS::NoValue"
+          TargetGroupArn:
+             Fn::ImportValue: 
+               Fn::Sub: "${albStackName}-TARGET-GROUP1"
+               
+      TaskDefinition: !Ref myEcsTaskDefinition
+      PlatformVersion: LATEST
+      DeploymentController:
+          Type: CODE_DEPLOY
+      ServiceConnectConfiguration:
+          Enabled: false
+              
+      Tags:
+       - Key: Name
+         Value: !Join ["-", [Fn::Sub: "${AWS::StackName} ", "Service"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+ # Outputs 
+ # 1) ECS Cluster 
+ # 2) Task Definition 
+ # 3) Image Repository Path 
+ # 4) URL to access the application 
+ # 
+Outputs: 
+  ECSClusterID: 
+    Description: ECS Cluster 
+    Value: !Ref myEcsCluster 
+
+  ECSTaskDefinition: 
+    Description: ECS Task 
+    Value: !Ref myEcsTaskDefinition 
+
+  MyRepositoryPath: 
+    Description: ECR Repo 
+    Value: !Sub '{{resolve:ssm:/${environment}/ecs/ecr_repository}}'                 
+
+  MyRepositoryArn: 
+    Description: ECR Repo 
+    Value: !Sub '{{resolve:ssm:/${environment}/ecs/ecr_repository_arn}}'                 
