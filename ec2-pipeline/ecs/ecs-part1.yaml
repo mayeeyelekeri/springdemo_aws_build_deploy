@@ -58,112 +58,112 @@ Resources:
    # 2) ECS Full access (to update ECS Service)
    # 3) ALB full access  
    #
-   myCodeDeployRoleFromECS:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub '{{resolve:ssm:/${environment}/ecs/codedeploy_role_name}}' 
-      Path: /
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codedeploy.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: "ECSAccess"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-                -
-                  Effect: "Allow"
-                  Action:
-                    - ecs:DescribeServices
-                    - ecs:CreateTaskSet
-                    - ecs:UpdateServicePrimaryTaskSet
-                    - ecs:DeleteTaskSet
-                    - elasticloadbalancing:DescribeTargetGroups
-                    - elasticloadbalancing:DescribeListeners
-                    - elasticloadbalancing:ModifyListener
-                    - elasticloadbalancing:DescribeRules
-                    - elasticloadbalancing:ModifyRule
-                    - lambda:InvokeFunction
-                    - cloudwatch:DescribeAlarms
-                    - sns:Publish
-                    - s3:GetObject
-                    - s3:GetObjectVersion
-                  Resource: "*"
-                -
-                 Effect: "Allow"
-                 Action:
-                    - iam:PassRole
-                 Resource: "*"      
-                 Condition:
-                   StringLike:
-                     iam:PassedToService:
-                     - ecs-tasks.amazonaws.com
-                             
-        - PolicyName: "S3Access"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-                -
-                  Effect: "Allow"
-                  Action:
-                      - s3:GetObject
-                      - s3:PutObject
-                      - s3:GetObjectVersion
-                  Resource: "*"
-        - PolicyName: "autoscale"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-                -
-                  Effect: "Allow"
-                  Action:
-                      - autoscaling:CompleteLifecycleAction
-                      - autoscaling:DeleteLifecycleHook
-                      - autoscaling:DescribeAutoScalingGroups
-                      - autoscaling:DescribeLifecycleHooks
-                      - autoscaling:PutLifecycleHook
-                      - autoscaling:RecordLifecycleActionHeartbeat
-                      - autoscaling:CreateAutoScalingGroup
-                      - autoscaling:CreateOrUpdateTags
-                      - autoscaling:UpdateAutoScalingGroup
-                      - autoscaling:EnableMetricsCollection
-                      - autoscaling:DescribePolicies
-                      - autoscaling:DescribeScheduledActions
-                      - autoscaling:DescribeNotificationConfigurations
-                      - autoscaling:SuspendProcesses
-                      - autoscaling:ResumeProcesses
-                      - autoscaling:AttachLoadBalancers
-                      - autoscaling:AttachLoadBalancerTargetGroups
-                      - autoscaling:PutScalingPolicy
-                      - autoscaling:PutScheduledUpdateGroupAction
-                      - autoscaling:PutNotificationConfiguration
-                      - autoscaling:PutWarmPool
-                      - autoscaling:DescribeScalingActivities
-                      - autoscaling:DeleteAutoScalingGroup
-                      - ec2:DescribeInstances
-                      - ec2:DescribeInstanceStatus
-                      - ec2:TerminateInstances
-                      - tag:GetResources
-                      - sns:Publish
-                      - cloudwatch:DescribeAlarms
-                      - cloudwatch:PutMetricAlarm
-                      - elasticloadbalancing:DescribeLoadBalancerAttributes
-                      - elasticloadbalancing:DescribeTargetGroupAttributes
-                      - elasticloadbalancing:DescribeLoadBalancers
-                      - elasticloadbalancing:DescribeInstanceHealth
-                      - elasticloadbalancing:RegisterInstancesWithLoadBalancer
-                      - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
-                      - elasticloadbalancing:DescribeTargetGroups
-                      - elasticloadbalancing:DescribeTargetHealth
-                      - elasticloadbalancing:RegisterTargets
-                      - elasticloadbalancing:DeregisterTargets
-                  Resource: "*"
-
+#   myCodeDeployRoleFromECS:
+#    Type: AWS::IAM::Role
+#    Properties:
+#      RoleName: !Sub '{{resolve:ssm:/${environment}/ecs/codedeploy_role_name}}' 
+#      Path: /
+#      AssumeRolePolicyDocument:
+#        Statement:
+#          - Effect: Allow
+#            Principal:
+#              Service:
+#                - codedeploy.amazonaws.com
+#            Action:
+#              - sts:AssumeRole
+#      Policies:
+#        - PolicyName: "ECSAccess"
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#                -
+#                  Effect: "Allow"
+#                  Action:
+#                    - ecs:DescribeServices
+#                    - ecs:CreateTaskSet
+#                    - ecs:UpdateServicePrimaryTaskSet
+#                    - ecs:DeleteTaskSet
+#                    - elasticloadbalancing:DescribeTargetGroups
+#                    - elasticloadbalancing:DescribeListeners
+#                    - elasticloadbalancing:ModifyListener
+#                    - elasticloadbalancing:DescribeRules
+#                    - elasticloadbalancing:ModifyRule
+#                    - lambda:InvokeFunction
+#                    - cloudwatch:DescribeAlarms
+#                    - sns:Publish
+#                    - s3:GetObject
+#                    - s3:GetObjectVersion
+#                  Resource: "*"
+#                -
+#                 Effect: "Allow"
+#                 Action:
+#                    - iam:PassRole
+#                 Resource: "*"      
+#                 Condition:
+#                   StringLike:
+#                     iam:PassedToService:
+#                     - ecs-tasks.amazonaws.com
+#                             
+#        - PolicyName: "S3Access"
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#                -
+#                  Effect: "Allow"
+#                  Action:
+#                      - s3:GetObject
+#                      - s3:PutObject
+#                      - s3:GetObjectVersion
+#                  Resource: "*"
+#        - PolicyName: "autoscale"
+#          PolicyDocument:
+#            Version: "2012-10-17"
+#            Statement:
+#                -
+#                  Effect: "Allow"
+#                  Action:
+#                      - autoscaling:CompleteLifecycleAction
+#                      - autoscaling:DeleteLifecycleHook
+#                      - autoscaling:DescribeAutoScalingGroups
+#                      - autoscaling:DescribeLifecycleHooks
+#                      - autoscaling:PutLifecycleHook
+#                      - autoscaling:RecordLifecycleActionHeartbeat
+#                      - autoscaling:CreateAutoScalingGroup
+#                      - autoscaling:CreateOrUpdateTags
+#                      - autoscaling:UpdateAutoScalingGroup
+#                      - autoscaling:EnableMetricsCollection
+#                      - autoscaling:DescribePolicies
+#                      - autoscaling:DescribeScheduledActions
+#                      - autoscaling:DescribeNotificationConfigurations
+#                      - autoscaling:SuspendProcesses
+#                      - autoscaling:ResumeProcesses
+#                      - autoscaling:AttachLoadBalancers
+#                      - autoscaling:AttachLoadBalancerTargetGroups
+#                      - autoscaling:PutScalingPolicy
+#                      - autoscaling:PutScheduledUpdateGroupAction
+#                      - autoscaling:PutNotificationConfiguration
+#                      - autoscaling:PutWarmPool
+#                      - autoscaling:DescribeScalingActivities
+#                      - autoscaling:DeleteAutoScalingGroup
+#                      - ec2:DescribeInstances
+#                      - ec2:DescribeInstanceStatus
+#                      - ec2:TerminateInstances
+#                      - tag:GetResources
+#                      - sns:Publish
+#                      - cloudwatch:DescribeAlarms
+#                      - cloudwatch:PutMetricAlarm
+#                      - elasticloadbalancing:DescribeLoadBalancerAttributes
+#                      - elasticloadbalancing:DescribeTargetGroupAttributes
+#                      - elasticloadbalancing:DescribeLoadBalancers
+#                      - elasticloadbalancing:DescribeInstanceHealth
+#                      - elasticloadbalancing:RegisterInstancesWithLoadBalancer
+#                      - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+#                      - elasticloadbalancing:DescribeTargetGroups
+#                      - elasticloadbalancing:DescribeTargetHealth
+#                      - elasticloadbalancing:RegisterTargets
+#                      - elasticloadbalancing:DeregisterTargets
+#                  Resource: "*"
+#
 
 # Outputs 
 # 1) ECS Role (ecs-ECSRole) 
@@ -177,9 +177,9 @@ Outputs:
       "Name" :
          Fn::Sub: "${AWS::StackName}-ECS-ROLE-ARN"
 
-  CodeDeployRoleArn:
-    Value: 
-      "Fn::GetAtt": ["myCodeDeployRoleFromECS", "Arn"]
-    Export:
-      "Name" :
-         Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ROLE-ARN"
+#  CodeDeployRoleArn:
+#    Value: 
+#      "Fn::GetAtt": ["myCodeDeployRoleFromECS", "Arn"]
+#    Export:
+#      "Name" :
+#         Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ROLE-ARN"
