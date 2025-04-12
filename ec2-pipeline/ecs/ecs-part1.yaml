@@ -58,7 +58,7 @@ Resources:
    # 2) ECS Full access (to update ECS Service)
    # 3) ALB full access  
    #
-   myCodeDeployRole:
+   myCodeDeployRoleFromECS:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub '{{resolve:ssm:/${environment}/ecs/codedeploy_role_name}}' 
@@ -179,7 +179,7 @@ Outputs:
 
   CodeDeployRoleArn:
     Value: 
-      "Fn::GetAtt": ["myCodeDeployRole", "Arn"]
+      "Fn::GetAtt": ["myCodeDeployRoleFromECS", "Arn"]
     Export:
       "Name" :
          Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ROLE-ARN"
