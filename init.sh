@@ -20,6 +20,7 @@ echo environment is $environment
 
 ./codedeploy/init.sh $1
 ./ec2/init.sh $1
+./codepipeline/init.sh $1
 
 
 start=$(date +%s) 
