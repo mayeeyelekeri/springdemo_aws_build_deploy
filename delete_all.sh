@@ -2,7 +2,7 @@
 
 SECONDS=0
 
-dirs=(codepipeline codedeploy ec2 )
+dirs=(codepipeline codedeploy )
 
 # Change into each directory and execute delete stack script
 for i in "${dirs[@]}"

@@ -9,7 +9,7 @@ sudo /usr/sbin/ntpdate pool.ntp.org
 # Create the basis stack (will create network permissions alb codebuild)  
 (cd ../basic_nw && ./create_all.sh) 
 
-dirs=(codedeploy ec2 codepipeline) 
+dirs=(codedeploy codepipeline) 
 
 # Change into each directory and execute create stack script 
 for i in "${dirs[@]}"

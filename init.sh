@@ -19,7 +19,6 @@ echo environment is $environment
 (cd ../basic_nw; ./init.sh $1) 
 
 ./codedeploy/init.sh $1
-./ec2/init.sh $1
 ./codepipeline/init.sh $1
 
 

@@ -1,7 +1,11 @@
 #!/bin/bash 
 
 SECONDS=0
-dirs=(network permissions alb ecs) 
+
+# Update all the basic stacks first 
+(cd ../basic_nw && ./update_all.sh)
+
+dirs=(codedeploy codepipeline) 
 
 # Change into each directory and execute update stack script 
 for i in "${dirs[@]}"
