@@ -1,0 +1,203 @@
+# File: perm.yaml 
+# This module create all the "permission" related resources 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
+#
+# Resource that would be created
+# 1) Public Security Group (80, 8080, 22 for 0.0.0.0/0)
+# 2) Private Security Group 
+# 3) EC2 Instance Profile 
+# 4) EC2 Instance Role  
+
+Description: "Permission stack to create Security Groups to launch EC2 instances"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+  # Create Public Security Group 
+  # Port 80 - access to 0.0.0.0/0 
+  # Port 22 - access to 0.0.0.0/0 
+  # Port 8080 - access to 0.0.0.0/0 
+  publicSG:
+    Description: "Allow TCP/80, TCP/8080 and SSH connection"
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      SecurityGroupIngress:
+        - Description: "Allow port 80" 
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/open_cidr}}'
+
+        - Description: "Allow port 8080" 
+          IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/open_cidr}}'
+
+        - Description: "Allow ssh port 22" 
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/open_cidr}}'
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Public Security Group"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+     
+  # Create Private Security Group 
+  # access to Public Subnet 1 for ports 80,22 and 8080
+  # access to Public Subnet 2 for ports 80,22 and 8080  
+  # access to Public Subnet 1 to ping    
+  # access to Public Subnet 2 to ping 
+  privateSG:
+    Description: "Allow TCP/80, TCP/8080, ICMP and SSH connection from Public subnets"
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      SecurityGroupIngress:
+        - Description: "Allow port 80" 
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet1_cidr}}'
+        - Description: "Allow port 8080" 
+          IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet1_cidr}}'
+        - Description: "Allow port 22" 
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet1_cidr}}'
+        - Description: "Allow ping" 
+          IpProtocol: icmp
+          FromPort: "-1"
+          ToPort: "-1"
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet1_cidr}}'
+        - Description: "Allow port 80" 
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet2_cidr}}'  
+        - Description: "Allow port 8080" 
+          IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet2_cidr}}'
+        - Description: "Allow port 22" 
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet2_cidr}}'
+        - Description: "Allow ping" 
+          IpProtocol: icmp
+          FromPort: "-1"
+          ToPort: "-1"
+          CidrIp: !Sub '{{resolve:ssm:/${environment}/network/public_subnet2_cidr}}'
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Private Security Group"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+      
+
+  #  Lambda Role to delete S3 bucket 
+  EmptyBucketFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'EmptyBucketPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:DeleteObject'
+                Resource: "*" 
+
+  # Lambda function to delete bucket 
+  # This gets called for stack updates, but executes only for stack "Delete" operation
+  EmptyBucketFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt EmptyBucketFunctionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          s3 = boto3.resource('s3')
+
+          def handler(event, context):
+              if event['RequestType'] == 'Delete':
+                  bucket_name = event['ResourceProperties']['BucketName']
+                  bucket = s3.Bucket(bucket_name)
+                  bucket.objects.all().delete()
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+      Runtime: 'python3.9'
+      Timeout: 300
+
+# Export all the values 
+# 1) public security group : perm-PUBLIC-SG 
+# 2) private security group : perm-PRIVATE-SG 
+#  
+Outputs:
+  PublicSecurityGroup:
+    Value: !Ref publicSG
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-PUBLIC-SG"
+
+  PrivateSecurityGroup:
+    Value: !Ref privateSG
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-PRIVATE-SG"
+  
+  EmptyBucketFunctionRole:
+    Value: !GetAtt EmptyBucketFunctionRole.arn 
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION-ROLE"
+  
+  EmptyBucketFunction:
+    Value: !Ref EmptyBucketFunction 
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION"
+  

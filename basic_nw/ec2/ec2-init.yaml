@@ -1,0 +1,105 @@
+Description: "Spinup few servers for testing"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Conditions: 
+  createOnlyProdResources: 
+    !Equals [ !Ref environment, "dev" ] 
+
+Resources:
+  publicInstances:                                                                
+    Description: "Open to public access, on http port 80"                        
+    Type: AWS::EC2::Instance
+    
+    # 5 minutes           
+    #CreationPolicy: 
+    #  ResourceSignal:
+    #    Timeout: PT5M     
+    Metadata:
+      "AWS::CloudFormation::Init":
+        configSets:
+          setup:
+            - install_code_deploy_agent
+            - install_docker
+        install_code_deploy_agent:
+          packages:
+            yum:
+              ruby: []
+          files:
+            "/home/ec2-user/install":
+              source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
+              mode: "000755"
+              owner: root
+              group: root
+          commands: 
+            "install_agent":
+              "command": "./install auto" 
+              "cwd": "/home/ec2-user" 
+            "cfn-signal-back": 
+              "command": 
+                Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
+        install_docker:
+          packages:
+            yum:
+              docker: []
+          commands: 
+            "docker_perm": 
+              "command": 
+                Fn::Sub: "usermod -aG docker ec2-user"
+            "cfn-signal-back": 
+              "command": 
+                Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
+          services: 
+            sysvinit: 
+              docker: 
+                enabled: true 
+                ensureRunning: true 
+                                                      
+    Condition: createOnlyProdResources 
+    Properties:                                                                  
+     ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'                 
+     KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
+     InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
+     IamInstanceProfile:                                     
+        Fn::ImportValue:                                                        
+           Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE"
+     SecurityGroupIds:                                                          
+        - Fn::ImportValue:                                                      
+           Fn::Sub: "${permStackName}-PUBLIC-SG"                                
+     SubnetId:                                                                  
+        Fn::ImportValue:                                                        
+           Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"                        
+     VpcId:                                                                     
+        Fn::ImportValue:                                                        
+          Fn::Sub: "${networkStackName}-VPCID"                                  
+                                                                                
+     UserData:                                                                  
+       Fn::Base64:                                                              
+         !Sub |                                                                 
+            #!/bin/bash -x                                                       
+            yum update -y
+            yum update -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource publicInstances --configsets setup --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}
+
+     Tags:
+       - Key: Name
+         Value: !Join ["-", [Fn::Sub: "${AWS::StackName}", "PublicInstance"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
