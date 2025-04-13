@@ -1,4 +1,4 @@
-# File: ecs-part2.yaml 
+# File: ecs.yaml 
 # This module create all the ECS related items
 #
 # Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
@@ -9,11 +9,9 @@
 # Resource that would be created
 # 1) ECS Cluster 
 # 2) ECS Task Definition  
-# 3) ECS Service 
-# 4) ECS Role 
 # 
 
-Description: "ECS Cluster and springdemo application"
+Description: "ECS Cluster for springdemo application"
 
 Parameters: 
   networkStackName:
@@ -31,10 +29,10 @@ Parameters:
     Type: String
     Default: alb
 
-  ecsPart1StackName:
-    Description: ECS Part1 stack 
+  perm3StackName:
+    Description: Perm2 stack 
     Type: String
-    Default: ecs-part1
+    Default: perm2
           
   environment: 
     Type: String 
@@ -94,7 +92,7 @@ Resources:
        - FARGATE
      ExecutionRoleArn: 
          Fn::ImportValue: 
-             Fn::Sub: "${ecsPart1StackName}-ECS-ROLE-ARN"
+             Fn::Sub: "${ecsPart1StackName}-ECS-EXECUTION-ROLE-ARN"
      Memory: 3 GB
      Cpu: 1 vCPU 
      NetworkMode: awsvpc
