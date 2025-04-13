@@ -318,10 +318,10 @@ Outputs:
         Fn::Sub: "${AWS::StackName}-PRIVATE-SG"
 
   CleanupS3Role:
-    Value: !GetAtt lambdaS3Role.arn 
+    Value: !GetAtt lambdaS3Role.Arn 
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION-ROLE"
+        Fn::Sub: "${AWS::StackName}-S3-ROLE-ARN"
 
   CleanupS3LambdaFunction:
     Value: !Ref cleanupS3LambdaFunction 
