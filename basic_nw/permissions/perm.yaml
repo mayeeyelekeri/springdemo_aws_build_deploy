@@ -325,7 +325,7 @@ Outputs:
         Fn::Sub: "${AWS::StackName}-CODEBUILD-SERVICE-ROLE-ARN" 
           
   Ec2InstanceProfile:
-    Value: !GetAtt ec2InstanceProfile.Arn 
+    Value: !Ref ec2InstanceProfile
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-EC2-INSTANCE-PROFILE"
