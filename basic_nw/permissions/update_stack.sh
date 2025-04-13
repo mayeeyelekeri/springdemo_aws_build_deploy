@@ -1,6 +1,6 @@
 #!/bin/bash
 
-aws cloudformation update-stack --stack-name perm --template-body file://perm_with_instance_profile.yaml   --capabilities CAPABILITY_NAMED_IAM $*
+aws cloudformation update-stack --stack-name perm --template-body file://perm.yaml   --capabilities CAPABILITY_NAMED_IAM $*
 
 status=$?
 if [ $status -eq 0 ]; then
