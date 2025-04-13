@@ -92,7 +92,7 @@ Resources:
        - FARGATE
      ExecutionRoleArn: 
          Fn::ImportValue: 
-             Fn::Sub: "${ecsPart1StackName}-ECS-EXECUTION-ROLE-ARN"
+             Fn::Sub: "${perm2StackName}-ECS-EXECUTION-ROLE-ARN"
      Memory: 3 GB
      Cpu: 1 vCPU 
      NetworkMode: awsvpc
