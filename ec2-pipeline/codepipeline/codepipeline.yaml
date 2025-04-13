@@ -23,27 +23,34 @@ Parameters:
     Default: nw
 
   permStackName:
-    Description: Name of the base stack with all network resources
+    Description: Stack with basis permissions 
     Type: String
     Default: perm
 
+  #
+  perm2StackName:
+    Description: Stack with extended permissions
+    Type: String
+    Default: perm2
+    
   albStackName:
-    Description: Name of the base stack with all network resources
+    Description: ALB stack resources 
     Type: String
     Default: alb
 
-  autoscaleStackName:
-    Description: Name of the base stack with all network resources
-    Type: String
-    Default: autoscale
-
   codebuildStackName:
-    Description: Name of the base stack with all network resources
+    Description: CodeBuild resources 
     Type: String
     Default: codebuild
 
+  # 
+  ecsStackName:
+    Description: ECS resources 
+    Type: String
+    Default: ecs
+    
   codedeployStackName:
-    Description: Name of the base stack with all network resources
+    Description: CodeDeploy resources 
     Type: String
     Default: codedeploy
 
@@ -65,7 +72,7 @@ Resources:
   #  1) Bucket prefix (from Parameter store)  
   #  2) StackID (get only the last part of the stack id, after splitting by "-" and "/")
   #
-  codepipelineBucket:
+  codePipelineBucket:
     Description: "Create S3 bucket for storing codepipeline artifacts"
     Type: AWS::S3::Bucket
     Properties:
@@ -97,14 +104,98 @@ Resources:
   #  5) CodePipeline bucket reference 
   #  6) storage as S3 
   #
-  pipelineProject:
+#  pipelineProjectUsingCodeDeploy:
+#    Type: AWS::CodePipeline::Pipeline
+#    DependsOn: codepipelineBucket
+#    Properties:
+#      Name: ec2PipelineUsingCodeDeploy
+#      RoleArn:
+#        Fn::ImportValue: 
+#            Fn::Sub: "${permStackName}-PIPELINE-SERVICE-ROLE-ARN"
+#      Stages:
+#        - Name: SourceStage
+#          Actions:
+#            - Name: GetSource
+#              ActionTypeId:
+#                Category: Source
+#                Owner: ThirdParty
+#                Provider: GitHub
+#                Version: "1"
+#              OutputArtifacts:
+#                - Name: sourceoutput
+#              Configuration:
+#                Owner: '{{resolve:secretsmanager:git_creds:SecretString:username}}'
+#                
+#                # Make sure just to specify only the reponame, not the fullpath 
+#                Repo: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo_short_name}}'
+#                
+#                Branch: main
+#                OAuthToken: '{{resolve:secretsmanager:git_creds:SecretString:token}}'
+#              RunOrder: 1
+#        - Name: BuildStage
+#          Actions:
+#            - Name: Build
+#              InputArtifacts:
+#                - Name: sourceoutput
+#              ActionTypeId:
+#                Category: Build
+#                Owner: AWS
+#                Provider: CodeBuild
+#                Version: "1"
+#              OutputArtifacts:
+#                - Name: buildartifacts
+#              Configuration:
+#                ProjectName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+#        - Name: DeployStage
+#          Actions:
+#            - Name: Deploy
+#              RunOrder: 1
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Provider: CodeDeploy
+#                Version: '1'
+#              Configuration:
+#                ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+#                DeploymentGroupName: 
+#                  Fn::ImportValue: 
+#                     Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
+#              InputArtifacts:
+#                - Name: buildartifacts
+#      ArtifactStore:
+#        Location: !Ref codepipelineBucket
+#        Type: S3
+
+  #
+  # 
+  # Create CodePipeline Project with 3 stages - source, build and deploy      
+  # Inputs: 
+  #  1) Code Pipeline Role arn  
+  #  2) GitHub specific 
+  #  2.a) GitHub repo name (last part only, from parameter store)
+  #  2.b) GitHub user name (from Secrets manager)
+  #  2.c) GitHub OAuth token (from Secrets manager)
+  #  2.d) Artifact Storage location (need this info in CodeDeploy)
+  # 
+  #  3) CodeBuild specific 
+  #  3.a) Application name (from parameter store)
+  # 
+  #  4) CodeDeploy specific 
+  #  3.a) Application name (from parameter store)
+  #  3.b) DeploymentGroup name 
+  #  3.c) Artifact Storage location (from CodeBuild)
+  # 
+  #  5) CodePipeline bucket reference 
+  #  6) storage as S3 
+  #
+  pipelineProjectUsingECS:
     Type: AWS::CodePipeline::Pipeline
     DependsOn: codepipelineBucket
     Properties:
-      Name: SpringDemoCodePipeline
-      RoleArn: !GetAtt pipelineServiceRole.Arn
-      #  Fn::ImportValue: 
-      #      Fn::Sub: "${codedeployStackName}-PIPELINE-SERVICE-ROLE-ARN"
+      Name: ecsPipeline
+      RoleArn:
+        Fn::ImportValue: 
+            Fn::Sub: "${permStackName}-PIPELINE-SERVICE-ROLE-ARN"
       Stages:
         - Name: SourceStage
           Actions:
@@ -146,109 +237,22 @@ Resources:
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
-                Provider: CodeDeploy
+                Provider: CodeDeployToECS
                 Version: '1'
               Configuration:
                 ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
                 DeploymentGroupName: 
-                  Fn::ImportValue: 
-                     Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
+                Image1ArtifactName: 
+                Image1ContainerName:
+                TaskDefinitionTemplatePath: 
+                AppSpecTemplatePath: 
+                TaskDefinitionTemplateArtifact:
               InputArtifacts:
                 - Name: buildartifacts
       ArtifactStore:
         Location: !Ref codepipelineBucket
         Type: S3
-
-  # Create CodeDeploy Service Role
-  pipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codepipeline.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}', codepipeline-base-policy ]]
-          PolicyDocument:
-           Version: 2012-10-17
-           Statement:
-            - Action:
-                - elasticbeanstalk:*
-                - ec2:*
-                - elasticloadbalancing:*
-                - autoscaling:*
-                - cloudwatch:*
-                - s3:*
-                - sns:*
-                - cloudformation:*
-                - rds:*
-                - ecs:*
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - codecommit:GetBranch
-                - codecommit:GetCommit
-                - codecommit:GetUploadArchiveStatus
-                - codecommit:UploadArchive
-                - codecommit:CancelUploadArchive
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - codedeploy:CreateDeployment
-                - codedeploy:GetApplicationRevision
-                - codedeploy:GetDeployment
-                - codedeploy:GetDeploymentConfig
-                - codedeploy:RegisterApplicationRevision
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - codebuild:BatchGetBuilds
-                - codebuild:StartBuild
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - iam:PassRole
-              Resource: "*"
-              Effect: Allow
-              Condition:
-                StringEqualsIfExists:
-                  iam:PassedToService:
-                    - cloudformation.amazonaws.com
-                    - elasticbeanstalk.amazonaws.com
-                    - ec2.amazonaws.com
-                    - ecs-tasks.amazonaws.com
-            - Action:
-                - lambda:InvokeFunction
-                - lambda:ListFunctions
-              Resource: "*"
-              Effect: Allow
-            - Action:
-                - ecr:DescribeImages
-              Resource: "*"
-              Effect: Allow
-              
-        # Policy to access Parameter Store 
-        - PolicyName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}', ssm-policy ]]
-          PolicyDocument:
-           Version: 2012-10-17
-           Statement:
-            - Effect: Allow
-              Resource:
-                - "*"
-              Action:
-                - ssm:DescribeParameters
-            - Effect: Allow
-              Resource:
-                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
-              Action:
-                - ssm:GetParameters
-
+        
   # Custome resource which joins the Bucket and Role for emptying the bucket while deletion  
   CustomBucketResource:
     Type: 'AWS::CloudFormation::CustomResource'
@@ -257,10 +261,17 @@ Resources:
           Fn::ImportValue: 
             Fn::Sub: "${permStackName}-S3-LAMBDA-FUNCTION-ARN"
       BucketName: !Ref codepipelineBucket 
-      
+    
 Outputs:
   CodePipelineBucket:
     Value: !Ref codepipelineBucket
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-CODEPIPELINE-BUCKET"
+
+  #
+  CodePipelineProject:
+    Value: !Ref codepipelineProject
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-CODEPIPELINE-PROJECT"

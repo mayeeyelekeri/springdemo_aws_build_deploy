@@ -2,7 +2,7 @@
 
 SECONDS=0
 
-dirs=(codepipeline codedeploy )
+dirs=(codepipeline codedeploy ecs permissions2)
 
 # Change into each directory and execute delete stack script
 for i in "${dirs[@]}"

@@ -7,7 +7,6 @@
 # Resource that would be created
 # 1) CodeDeploy project  
 # 2) CodeDeploy Deployment group 
-# 3) CodeDeploy Service Role 
 # 
 
 Description: "Create CodeDeploy project and deployment group"
@@ -23,6 +22,11 @@ Parameters:
     Type: String
     Default: perm
 
+  perm2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm2
+    
   albStackName:
     Description: Name of the base stack with all network resources
     Type: String
@@ -59,7 +63,7 @@ Resources:
   # Create CodeDeploy Deployment group ]    
   # Inputs: 
   # 1) codedeploy application reference
-  # 2) codedeploy service role reference 
+  # 2) codedeploy service role reference (from Permissions Stack)
   # 3) EC2 tag name 
   # 
   myDeployGroup: 
@@ -67,7 +71,9 @@ Resources:
     Properties: 
       DeploymentGroupName: mydeploygroup 
       ApplicationName: !Ref myCodeDeployProject
-      ServiceRoleArn: !GetAtt myCodeDeployRole.Arn 
+      ServiceRoleArn: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-PIPELINE-SERVICE-ROLE-ARN"
       DeploymentConfigName: CodeDeployDefault.AllAtOnce
       Ec2TagFilters: 
        - Key: Name 
@@ -80,121 +86,7 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}
 
-  # Create CodeDeploy Service Role    
-  #   
-  myCodeDeployRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: mycodedeployrole
-      Path: /
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codedeploy.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: "ECSAccess"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-                -
-                  Effect: "Allow"
-                  Action:
-                    - ecs:DescribeServices
-                    - ecs:CreateTaskSet
-                    - ecs:UpdateServicePrimaryTaskSet
-                    - ecs:DeleteTaskSet
-                    - elasticloadbalancing:DescribeTargetGroups
-                    - elasticloadbalancing:DescribeListeners
-                    - elasticloadbalancing:ModifyListener
-                    - elasticloadbalancing:DescribeRules
-                    - elasticloadbalancing:ModifyRule
-                    - lambda:InvokeFunction
-                    - cloudwatch:DescribeAlarms
-                    - sns:Publish
-                    - s3:GetObject
-                    - s3:GetObjectVersion
-                  Resource: "*"
-                -
-                 Effect: "Allow"
-                 Action:
-                    - iam:PassRole
-                 Resource: "*"      
-                 Condition:
-                   StringLike:
-                     iam:PassedToService:
-                     - ecs-tasks.amazonaws.com
-                             
-        - PolicyName: "S3"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-                -
-                  Effect: "Allow"
-                  Action:
-                      - s3:GetObject
-                      - s3:PutObject
-                      - s3:GetObjectVersion
-                  Resource: "*"
-        - PolicyName: "autoscale"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-                -
-                  Effect: "Allow"
-                  Action:
-                      - autoscaling:CompleteLifecycleAction
-                      - autoscaling:DeleteLifecycleHook
-                      - autoscaling:DescribeAutoScalingGroups
-                      - autoscaling:DescribeLifecycleHooks
-                      - autoscaling:PutLifecycleHook
-                      - autoscaling:RecordLifecycleActionHeartbeat
-                      - autoscaling:CreateAutoScalingGroup
-                      - autoscaling:CreateOrUpdateTags
-                      - autoscaling:UpdateAutoScalingGroup
-                      - autoscaling:EnableMetricsCollection
-                      - autoscaling:DescribePolicies
-                      - autoscaling:DescribeScheduledActions
-                      - autoscaling:DescribeNotificationConfigurations
-                      - autoscaling:SuspendProcesses
-                      - autoscaling:ResumeProcesses
-                      - autoscaling:AttachLoadBalancers
-                      - autoscaling:AttachLoadBalancerTargetGroups
-                      - autoscaling:PutScalingPolicy
-                      - autoscaling:PutScheduledUpdateGroupAction
-                      - autoscaling:PutNotificationConfiguration
-                      - autoscaling:PutWarmPool
-                      - autoscaling:DescribeScalingActivities
-                      - autoscaling:DeleteAutoScalingGroup
-                      - ec2:DescribeInstances
-                      - ec2:DescribeInstanceStatus
-                      - ec2:TerminateInstances
-                      - tag:GetResources
-                      - sns:Publish
-                      - cloudwatch:DescribeAlarms
-                      - cloudwatch:PutMetricAlarm
-                      - elasticloadbalancing:DescribeLoadBalancerAttributes
-                      - elasticloadbalancing:DescribeTargetGroupAttributes
-                      - elasticloadbalancing:DescribeLoadBalancers
-                      - elasticloadbalancing:DescribeInstanceHealth
-                      - elasticloadbalancing:RegisterInstancesWithLoadBalancer
-                      - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
-                      - elasticloadbalancing:DescribeTargetGroups
-                      - elasticloadbalancing:DescribeTargetHealth
-                      - elasticloadbalancing:RegisterTargets
-                      - elasticloadbalancing:DeregisterTargets
-                  Resource: "*"
-
 Outputs:
-  CodeDeployRole:
-    Value: !Ref myCodeDeployRole
-    Export:
-      "Name" :
-        Fn::Sub: "${AWS::StackName}-DEPLOY-ROLE"
-
   CodeDeployGroup:
     Value: !Ref myDeployGroup
     Export:

@@ -124,10 +124,44 @@ Resources:
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Private Security Group"] ]
        - Key: Environment
          Value: !Sub ${environment}	
-      
 
-  #  Lambda Role to delete S3 bucket 
-  EmptyBucketFunctionRole:
+  # Create EC2 instance role with S3 access  
+  ec2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ec2InstanceRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: s3accesspolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+
+  # Create EC2 Instance profile with the role above for S3 access 
+  ec2InstanceProfile:
+    Description: "EC2 Instance profile with S3 access" 
+    Type: AWS::IAM::InstanceProfile 
+    Properties: 
+      Path: "/" 
+      Roles: 
+        - 
+          Ref: ec2InstanceRole
+      
+  # Lambda Role to delete S3 bucket 
+  lambdaS3Role:
     Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
@@ -148,13 +182,16 @@ Resources:
                   - 's3:DeleteObject'
                 Resource: "*" 
 
+  # 
   # Lambda function to delete bucket 
+  # Attach lambdaS3Role to this function 
   # This gets called for stack updates, but executes only for stack "Delete" operation
-  EmptyBucketFunction:
+  # 
+  cleanupS3LambdaFunction:
     Type: 'AWS::Lambda::Function'
     Properties:
       Handler: index.handler
-      Role: !GetAtt EmptyBucketFunctionRole.Arn
+      Role: !GetAtt lambdaS3Role.Arn
       Code:
         ZipFile: |
           import boto3
@@ -175,8 +212,10 @@ Resources:
 # Export all the values 
 # 1) public security group : perm-PUBLIC-SG 
 # 2) private security group : perm-PRIVATE-SG 
-#  
-Outputs:
+# 3) EC2 Role - perm-EC2-INSTANCE-ROLE
+# 4) EC2 Instance profile - perm-EC2-INSTANCE-PROFILE
+#
+Outputs: 
   PublicSecurityGroup:
     Value: !Ref publicSG
     Export:
@@ -188,16 +227,23 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-PRIVATE-SG"
-  
+
   EmptyBucketFunctionRole:
     Value: !GetAtt EmptyBucketFunctionRole.arn 
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION-ROLE"
-  
+
   EmptyBucketFunction:
     Value: !Ref EmptyBucketFunction 
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION"
-  
+
+  #
+  CodeBuildServiceRole:
+    Value: !GetAtt codeBuildServiceRole.Arn 
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-CODEBUILD-SERVICE-ROLE-ARN" 
+        

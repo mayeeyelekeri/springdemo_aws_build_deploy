@@ -5,7 +5,7 @@ SECONDS=0
 # Update all the basic stacks first 
 (cd ../basic_nw && ./update_all.sh)
 
-dirs=(codedeploy codepipeline) 
+dirs=(permissions2 ecs codedeploy codepipeline) 
 
 # Change into each directory and execute update stack script 
 for i in "${dirs[@]}"
