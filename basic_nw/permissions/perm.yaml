@@ -317,11 +317,18 @@ Outputs:
       "Name" :
         Fn::Sub: "${AWS::StackName}-PRIVATE-SG"
 
-  CleanupS3Role:
-    Value: !GetAtt lambdaS3Role.Arn 
+  # 
+  CodeBuildServiceRole:
+    Value: !GetAtt codeBuildServiceRole.Arn 
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-S3-ROLE-ARN"
+        Fn::Sub: "${AWS::StackName}-CODEBUILD-SERVICE-ROLE-ARN" 
+          
+  Ec2InstanceProfile:
+    Value: !GetAtt ec2InstanceProfile.Arn 
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-EC2-INSTANCE-PROFILE"
 
   CleanupS3LambdaFunction:
     Value: !Ref cleanupS3LambdaFunction 
@@ -329,7 +336,6 @@ Outputs:
       "Name" :
         Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION"
 
-  #
   CodeBuildServiceRole:
     Value: !GetAtt codeBuildServiceRole.Arn 
     Export:
