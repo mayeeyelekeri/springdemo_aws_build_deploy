@@ -223,6 +223,42 @@ Resources:
               Action:
                 - ssm:GetParameters
 
+  # 
+  # Create an a Role for ECS to pull images from ECR     
+  # Also to log events in cloudwatch 
+  # This will be used by ECS 
+  #
+  myECSRole:
+   Type: AWS::IAM::Role
+   Properties:
+     RoleName: !Sub '{{resolve:ssm:/${environment}/ecs/ecs_role_name}}'
+     Path: /
+     AssumeRolePolicyDocument:
+       Statement:
+         - Effect: Allow
+           Principal:
+             Service:
+               - ecs-tasks.amazonaws.com
+           Action:
+             - sts:AssumeRole
+
+     Policies:
+       - PolicyName: "AmazonECSTaskExecutionRolePolicy"
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+               -
+                 Effect: "Allow"
+                 Action:
+                     - ecr:GetAuthorizationToken
+                     - ecr:BatchCheckLayerAvailability
+                     - ecr:GetDownloadUrlForLayer
+                     - ecr:BatchGetImage
+                     - logs:CreateLogStream
+                     - logs:PutLogEvents
+                 Resource: "*"
+
+
 # Export all the values 
 # 1) Code deploy service role Arn: perm2-CODEDEPLOY-SERVICE-ROLE-ARN
 # 2) Code pipeline service role Arn: perm2-CODEPIPELINE-SERVICE-ROLE-ARN
