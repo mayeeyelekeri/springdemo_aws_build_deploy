@@ -329,12 +329,18 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-EC2-INSTANCE-PROFILE"
-
-  CleanupS3LambdaFunction:
-    Value: !Ref cleanupS3LambdaFunction 
+      
+  LambdaS3RoleArn:
+    Value: !GetAtt lambdaS3Role.Arn 
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-EMPTY-BUCKET-FUNCTION"
+        Fn::Sub: "${AWS::StackName}-S3-BUCKET-ROLE-ARN" 
+         
+  CleanupS3LambdaFunction:
+    Value: !GetAtt cleanupS3LambdaFunction.Arn
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-CLEANUP-BUCKET-FUNCTION-ARN"
 
   CodeBuildServiceRole:
     Value: !GetAtt codeBuildServiceRole.Arn 
