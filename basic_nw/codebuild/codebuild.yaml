@@ -105,7 +105,9 @@ Resources:
         Location: !Sub arn:aws:s3:::${codebuildBucket}
         EncryptionDisabled: True
 
-     ServiceRole: !Ref myCodebuildProjectRole   
+     ServiceRole:   
+        Fn::ImportValue: 
+          Fn::Sub: "${permStackName}-CODEBUILD-SERVICE-ROLE-ARN"
 
      Environment: # use Ubuntu standard v7
         Type: LINUX_CONTAINER
@@ -128,7 +130,7 @@ Resources:
     Properties:
       ServiceToken:  
         Fn::ImportValue: 
-          Fn::Sub: "${permStackName}-S3-LAMBDA-FUNCTION-ARN"
+          Fn::Sub: ${permStackName}-CLEANUP-BUCKET-FUNCTION-ARN
       BucketName: !Ref codebuildBucket 
 
 # Outputs     
