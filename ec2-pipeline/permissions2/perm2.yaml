@@ -228,10 +228,10 @@ Resources:
   # Also to log events in cloudwatch 
   # This will be used by ECS 
   #
-  myECSRole:
+  ecsExecutionRole:
    Type: AWS::IAM::Role
    Properties:
-     RoleName: !Sub '{{resolve:ssm:/${environment}/ecs/ecs_role_name}}'
+     RoleName: ecsExecutionRole
      Path: /
      AssumeRolePolicyDocument:
        Statement:
@@ -274,4 +274,10 @@ Outputs:
     Value: !GetAtt codePipelineServiceRole.Arn 
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-PIPELINE-SERVICE-ROLE-ARN"  
+        Fn::Sub: "${AWS::StackName}-PIPELINE-SERVICE-ROLE-ARN"
+  
+  EcsExecutionRoleArn:
+    Value: !GetAtt ecsExecutionRole.Arn 
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-ECS-EXECUTION-ROLE-ARN"   
