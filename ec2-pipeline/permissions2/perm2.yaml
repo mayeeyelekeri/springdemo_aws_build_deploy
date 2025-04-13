@@ -135,7 +135,7 @@ Resources:
   codePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: codePieplineServiceRole
+      RoleName: codePipelineServiceRole
       Path: /
       AssumeRolePolicyDocument:
         Version: 2012-10-17

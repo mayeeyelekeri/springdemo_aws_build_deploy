@@ -104,98 +104,14 @@ Resources:
   #  5) CodePipeline bucket reference 
   #  6) storage as S3 
   #
-#  pipelineProjectUsingCodeDeploy:
-#    Type: AWS::CodePipeline::Pipeline
-#    DependsOn: codepipelineBucket
-#    Properties:
-#      Name: ec2PipelineUsingCodeDeploy
-#      RoleArn:
-#        Fn::ImportValue: 
-#            Fn::Sub: "${permStackName}-PIPELINE-SERVICE-ROLE-ARN"
-#      Stages:
-#        - Name: SourceStage
-#          Actions:
-#            - Name: GetSource
-#              ActionTypeId:
-#                Category: Source
-#                Owner: ThirdParty
-#                Provider: GitHub
-#                Version: "1"
-#              OutputArtifacts:
-#                - Name: sourceoutput
-#              Configuration:
-#                Owner: '{{resolve:secretsmanager:git_creds:SecretString:username}}'
-#                
-#                # Make sure just to specify only the reponame, not the fullpath 
-#                Repo: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo_short_name}}'
-#                
-#                Branch: main
-#                OAuthToken: '{{resolve:secretsmanager:git_creds:SecretString:token}}'
-#              RunOrder: 1
-#        - Name: BuildStage
-#          Actions:
-#            - Name: Build
-#              InputArtifacts:
-#                - Name: sourceoutput
-#              ActionTypeId:
-#                Category: Build
-#                Owner: AWS
-#                Provider: CodeBuild
-#                Version: "1"
-#              OutputArtifacts:
-#                - Name: buildartifacts
-#              Configuration:
-#                ProjectName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
-#        - Name: DeployStage
-#          Actions:
-#            - Name: Deploy
-#              RunOrder: 1
-#              ActionTypeId:
-#                Category: Deploy
-#                Owner: AWS
-#                Provider: CodeDeploy
-#                Version: '1'
-#              Configuration:
-#                ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
-#                DeploymentGroupName: 
-#                  Fn::ImportValue: 
-#                     Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
-#              InputArtifacts:
-#                - Name: buildartifacts
-#      ArtifactStore:
-#        Location: !Ref codepipelineBucket
-#        Type: S3
-
-  #
-  # 
-  # Create CodePipeline Project with 3 stages - source, build and deploy      
-  # Inputs: 
-  #  1) Code Pipeline Role arn  
-  #  2) GitHub specific 
-  #  2.a) GitHub repo name (last part only, from parameter store)
-  #  2.b) GitHub user name (from Secrets manager)
-  #  2.c) GitHub OAuth token (from Secrets manager)
-  #  2.d) Artifact Storage location (need this info in CodeDeploy)
-  # 
-  #  3) CodeBuild specific 
-  #  3.a) Application name (from parameter store)
-  # 
-  #  4) CodeDeploy specific 
-  #  3.a) Application name (from parameter store)
-  #  3.b) DeploymentGroup name 
-  #  3.c) Artifact Storage location (from CodeBuild)
-  # 
-  #  5) CodePipeline bucket reference 
-  #  6) storage as S3 
-  #
-  pipelineProjectUsingECS:
+  pipelineProjectUsingCodeDeploy:
     Type: AWS::CodePipeline::Pipeline
-    DependsOn: codepipelineBucket
+    DependsOn: codePipelineBucket
     Properties:
-      Name: ecsPipeline
+      Name: ec2PipelineUsingCodeDeploy
       RoleArn:
         Fn::ImportValue: 
-            Fn::Sub: "${permStackName}-PIPELINE-SERVICE-ROLE-ARN"
+            Fn::Sub: "${perm2StackName}-PIPELINE-SERVICE-ROLE-ARN"
       Stages:
         - Name: SourceStage
           Actions:
@@ -237,21 +153,105 @@ Resources:
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
-                Provider: CodeDeployToECS
+                Provider: CodeDeploy
                 Version: '1'
               Configuration:
                 ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
                 DeploymentGroupName: 
-                Image1ArtifactName: 
-                Image1ContainerName:
-                TaskDefinitionTemplatePath: 
-                AppSpecTemplatePath: 
-                TaskDefinitionTemplateArtifact:
+                  Fn::ImportValue: 
+                     Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
               InputArtifacts:
                 - Name: buildartifacts
       ArtifactStore:
-        Location: !Ref codepipelineBucket
+        Location: !Ref codePipelineBucket
         Type: S3
+
+  #
+  # 
+  # Create CodePipeline Project with 3 stages - source, build and deploy      
+  # Inputs: 
+  #  1) Code Pipeline Role arn  
+  #  2) GitHub specific 
+  #  2.a) GitHub repo name (last part only, from parameter store)
+  #  2.b) GitHub user name (from Secrets manager)
+  #  2.c) GitHub OAuth token (from Secrets manager)
+  #  2.d) Artifact Storage location (need this info in CodeDeploy)
+  # 
+  #  3) CodeBuild specific 
+  #  3.a) Application name (from parameter store)
+  # 
+  #  4) CodeDeploy specific 
+  #  3.a) Application name (from parameter store)
+  #  3.b) DeploymentGroup name 
+  #  3.c) Artifact Storage location (from CodeBuild)
+  # 
+  #  5) CodePipeline bucket reference 
+  #  6) storage as S3 
+  #
+#  pipelineProjectUsingECS:
+#    Type: AWS::CodePipeline::Pipeline
+#    DependsOn: codePipelineBucket
+#    Properties:
+#      Name: ecsPipeline
+#      RoleArn:
+#        Fn::ImportValue: 
+#            Fn::Sub: "${perm2StackName}-PIPELINE-SERVICE-ROLE-ARN"
+#      Stages:
+#        - Name: SourceStage
+#          Actions:
+#            - Name: GetSource
+#              ActionTypeId:
+#                Category: Source
+#                Owner: ThirdParty
+#                Provider: GitHub
+#                Version: "1"
+#              OutputArtifacts:
+#                - Name: sourceoutput
+#              Configuration:
+#                Owner: '{{resolve:secretsmanager:git_creds:SecretString:username}}'
+#                
+#                # Make sure just to specify only the reponame, not the fullpath 
+#                Repo: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo_short_name}}'
+#                
+#                Branch: main
+#                OAuthToken: '{{resolve:secretsmanager:git_creds:SecretString:token}}'
+#              RunOrder: 1
+#        - Name: BuildStage
+#          Actions:
+#            - Name: Build
+#              InputArtifacts:
+#                - Name: sourceoutput
+#              ActionTypeId:
+#                Category: Build
+#                Owner: AWS
+#                Provider: CodeBuild
+#                Version: "1"
+#              OutputArtifacts:
+#                - Name: buildartifacts
+#              Configuration:
+#                ProjectName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+#        - Name: DeployStage
+#          Actions:
+#            - Name: Deploy
+#              RunOrder: 1
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Provider: CodeDeployToECS
+#                Version: '1'
+#              Configuration:
+#                ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+#                DeploymentGroupName: 
+#                Image1ArtifactName: 
+#                Image1ContainerName:
+#                TaskDefinitionTemplatePath: 
+#                AppSpecTemplatePath: 
+#                TaskDefinitionTemplateArtifact:
+#              InputArtifacts:
+#                - Name: buildartifacts
+#      ArtifactStore:
+#        Location: !Ref codePipelineBucket
+#        Type: S3
         
   # Custome resource which joins the Bucket and Role for emptying the bucket while deletion  
   CustomBucketResource:
@@ -259,19 +259,19 @@ Resources:
     Properties:
       ServiceToken:  
           Fn::ImportValue: 
-            Fn::Sub: "${permStackName}-S3-LAMBDA-FUNCTION-ARN"
-      BucketName: !Ref codepipelineBucket 
+            Fn::Sub: "${permStackName}-CLEANUP-BUCKET-FUNCTION-ARN"
+      BucketName: !Ref codePipelineBucket 
     
 Outputs:
   CodePipelineBucket:
-    Value: !Ref codepipelineBucket
+    Value: !Ref codePipelineBucket
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-CODEPIPELINE-BUCKET"
 
   #
   CodePipelineProject:
-    Value: !Ref codepipelineProject
+    Value: !Ref pipelineProjectUsingCodeDeploy
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-CODEPIPELINE-PROJECT"

@@ -73,7 +73,7 @@ Resources:
       ApplicationName: !Ref myCodeDeployProject
       ServiceRoleArn: 
         Fn::ImportValue: 
-           Fn::Sub: "${perm2StackName}-PIPELINE-SERVICE-ROLE-ARN"
+           Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
       DeploymentConfigName: CodeDeployDefault.AllAtOnce
       Ec2TagFilters: 
        - Key: Name 

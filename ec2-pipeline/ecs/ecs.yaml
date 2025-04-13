@@ -29,7 +29,7 @@ Parameters:
     Type: String
     Default: alb
 
-  perm3StackName:
+  perm2StackName:
     Description: Perm2 stack 
     Type: String
     Default: perm2
