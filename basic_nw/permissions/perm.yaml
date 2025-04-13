@@ -208,12 +208,101 @@ Resources:
 
       Runtime: 'python3.9'
       Timeout: 300
-
+  
+  # Create CodeBuild Project Role     
+  # This role should have access to the following:
+  # - S3
+  # - Parameter Sore 
+  # - Password manager 
+  # - Log group 
+  # 
+  # Inputs: 
+  #  1) Service Role name  
+  #  2) Git Credentials  
+  # 
+  codeBuildServiceRole:
+     Type: AWS::IAM::Role
+     Properties:
+       RoleName: codeBuildProjectRole
+       Path: /
+       AssumeRolePolicyDocument:
+         Statement:
+           - Effect: Allow
+             Principal:
+               Service:
+                 - codebuild.amazonaws.com
+             Action:
+               - sts:AssumeRole
+ 
+       Policies:
+         - PolicyName: "logs"
+           PolicyDocument:
+             Version: "2012-10-17"
+             Statement:
+                 -
+                   Effect: "Allow"
+                   Action:
+                       - logs:CreateLogGroup
+                       - logs:CreateLogStream
+                       - logs:PutLogEvents
+                       - ecr:GetAuthorizationToken
+                       - ssm:GetParameters
+                   Resource: "*"
+         - PolicyName: "S3"
+           PolicyDocument:
+             Version: "2012-10-17"
+             Statement:
+                 -
+                   Effect: "Allow"
+                   Action:
+                       - s3:GetObject
+                       - s3:PutObject
+                       - s3:GetObjectVersion
+                   Resource: "*"
+         - PolicyName: "Reports"
+           PolicyDocument:
+             Version: "2012-10-17"
+             Statement:
+                 -
+                   Effect: "Allow"
+                   Action:
+                       - codebuild:CreateReportGroup
+                       - codebuild:CreateReport
+                       - codebuild:UpdateReport
+                       - codebuild:BatchPutTestCases
+                       - codebuild:BatchPutCodeCoverages
+                   Resource: "*"
+         - PolicyName: "ECR"
+           PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+               -
+                Effect: "Allow"
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages 
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                  - ecr:GetLifecyclePolicy
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:ListTagsForResource
+                  - ecr:DescribeImageScanFindings
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                Resource: "*"
+                
 # Export all the values 
 # 1) public security group : perm-PUBLIC-SG 
 # 2) private security group : perm-PRIVATE-SG 
 # 3) EC2 Role - perm-EC2-INSTANCE-ROLE
 # 4) EC2 Instance profile - perm-EC2-INSTANCE-PROFILE
+# 5) CodeBuild Project Role Arn - perm--CODEBUILD-SERVICE-ROLE-ARN
 #
 Outputs: 
   PublicSecurityGroup:
