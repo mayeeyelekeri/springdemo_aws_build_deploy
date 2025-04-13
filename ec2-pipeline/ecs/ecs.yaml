@@ -55,7 +55,7 @@ Resources:
   #   1) Make sure to select FARGATE 
   #   2) Enable Container Insights 
   #   
-  myEcsCluster:                                                                
+  ecsCluster:                                                                
     Description: "New ECS Cluster"                        
     Type: AWS::ECS::Cluster
     Properties:                                                                  
@@ -83,7 +83,7 @@ Resources:
   #   2) Enable Container Insights 
   #   3) Container Port
   # 
-  myEcsTaskDefinition: 
+  ecsTaskDefinition: 
     Description: "ECS task definition" 
     Type: AWS::ECS::TaskDefinition
     Properties:                                                                  
@@ -131,9 +131,9 @@ Resources:
   #   5) Public Subnet 1 information from the "network" stack 
   #   6) ALB Target Group reference from the "alb" stack 
   # 
-  myEcsService:
+  ecsService:
     Type: 'AWS::ECS::Service'
-    DependsOn: myEcsCluster
+    DependsOn: ecsCluster
     Properties:
       ServiceName: !Sub '{{resolve:ssm:/${environment}/ecs/service_name}}'  
       Cluster: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}' 
@@ -165,7 +165,7 @@ Resources:
              Fn::ImportValue: 
                Fn::Sub: "${albStackName}-TARGET-GROUP1"
                
-      TaskDefinition: !Ref myEcsTaskDefinition
+      TaskDefinition: !Ref ecsTaskDefinition
       PlatformVersion: LATEST
  #     DeploymentController:
  #         Type: CODE_DEPLOY
@@ -187,11 +187,11 @@ Resources:
 Outputs: 
   ECSClusterID: 
     Description: ECS Cluster 
-    Value: !Ref myEcsCluster 
+    Value: !Ref ecsCluster 
 
   ECSTaskDefinition: 
     Description: ECS Task 
-    Value: !Ref myEcsTaskDefinition 
+    Value: !Ref ecsTaskDefinition 
 
   MyRepositoryPath: 
     Description: ECR Repo 
