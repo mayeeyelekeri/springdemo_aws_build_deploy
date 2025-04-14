@@ -66,10 +66,10 @@ Resources:
 
   #
   publicInstanceWithCInit:                                                                
-      Description: "Public instance with cfn-init, on http port 80"                        
+      Description: "Public instance with cfn-init, install codedeploy agent and docker"                        
       Type: AWS::EC2::Instance
       
-      # 5 minutes           
+      # Wait for 5 minutes max          
       CreationPolicy: 
         ResourceSignal:
           Timeout: PT5M     
@@ -81,7 +81,7 @@ Resources:
               - install_base_packages                     
               - install_code_deploy_agent
               - install_docker
-          # 
+           
           install_base_packages:
             commands:
                 "updates": 
