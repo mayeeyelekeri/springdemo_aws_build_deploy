@@ -76,26 +76,36 @@ Resources:
       Metadata:
         "AWS::CloudFormation::Init":
           configSets:
-            setup:
+            setup:  
+              - install_base_packages                     
               - install_code_deploy_agent
               - install_docker
+          # 
+          install_base_packages:
+            commands:
+                "updates": 
+                    "command": "yum update -y"
+                "ruby_install": 
+                    "command": "yum install -y ruby"
+                       
           install_code_deploy_agent:
             packages:
-              yum:
-                ruby: []
+                yum:
+                     ruby: []
             files:
-              "/home/ec2-user/install":
-                source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
-                mode: "000755"
-                owner: root
-                group: root
+               "/home/ec2-user/install":
+                 source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
+                 mode: "000755"
+                 owner: root
+                 group: root
             commands: 
               "install_agent":
-                "command": "./install auto" 
-                "cwd": "/home/ec2-user" 
+                 "command": "./install auto" 
+                 "cwd": "/home/ec2-user" 
               "cfn-signal-back": 
-                "command": 
-                  Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}"
+                 "command": 
+                    Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
+ 
           install_docker:
             packages:
               yum:
