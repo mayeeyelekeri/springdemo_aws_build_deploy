@@ -89,9 +89,6 @@ Resources:
                     "command": "yum install -y ruby"
                        
           install_code_deploy_agent:
-            packages:
-                yum:
-                     ruby: []
             files:
                "/home/ec2-user/install":
                  source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
