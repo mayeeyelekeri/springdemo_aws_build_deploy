@@ -70,9 +70,10 @@ Resources:
       Type: AWS::EC2::Instance
       
       # 5 minutes           
-      #CreationPolicy: 
-      #  ResourceSignal:
-      #    Timeout: PT5M     
+      CreationPolicy: 
+        ResourceSignal:
+          Timeout: PT5M     
+          
       Metadata:
         "AWS::CloudFormation::Init":
           configSets:
@@ -99,10 +100,10 @@ Resources:
               "install_agent":
                  "command": "./install auto" 
                  "cwd": "/home/ec2-user" 
-              "cfn-signal-back": 
-                 "command": 
-                    Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
- 
+#              "cfn-signal-back": 
+#                 "command": 
+#                    Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
+# 
           install_docker:
             packages:
               yum:
@@ -111,9 +112,9 @@ Resources:
               "docker_perm": 
                 "command": 
                   Fn::Sub: "usermod -aG docker ec2-user"
-              "cfn-signal-back": 
-                "command": 
-                  Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}"
+#              "cfn-signal-back": 
+#                "command": 
+#                  Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}"
             services: 
               sysvinit: 
                 docker: 
@@ -171,11 +172,11 @@ Outputs:
     Value: !Ref publicInstanceWithCInit
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-PUBLIC-INSTANCE2"
+        Fn::Sub: "${AWS::StackName}-PUBLIC-INSTANCE"
 
   privateIPAddress:
     Value: !GetAtt publicInstanceWithCInit.PrivateIpAddress
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-INSTANCE2-PRIVATE-IP"  
+        Fn::Sub: "${AWS::StackName}-INSTANCE-PRIVATE-IP"  
        
