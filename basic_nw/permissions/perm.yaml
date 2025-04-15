@@ -296,6 +296,24 @@ Resources:
                   - ecr:CompleteLayerUpload
                   - ecr:PutImage
                 Resource: "*"
+            
+         - PolicyName: "AmazonECSTaskExecutionRolePolicy"
+           PolicyDocument:
+             Version: "2012-10-17"
+             Statement:
+               -
+                Effect: "Allow"
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecs:DescribeTaskDefinition
+                  - ecs:ListTaskDefinition
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - ecs:*
+                Resource: "*"     
                 
 # Export all the values 
 # 1) public security group : perm-PUBLIC-SG 

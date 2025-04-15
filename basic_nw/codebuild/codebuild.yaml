@@ -149,7 +149,7 @@ Resources:
        Type: GITHUB
        Location: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo}}'
        GitCloneDepth: 1
-       BuildSpec: buildspec.yml_zip_version
+       BuildSpec: buildspec_image_no_commit_id.yml
        Auth:
           Resource: !Ref gitCreds1
           Type: OAUTH

@@ -167,6 +167,10 @@ Resources:
                
       TaskDefinition: !Ref ecsTaskDefinition
       PlatformVersion: LATEST
+      
+      # 
+      # ****** Integration with CodeDeploy, have a Hood problem for BLUE-GREEN 
+      # 
       DeploymentController:
           Type: CODE_DEPLOY
       ServiceConnectConfiguration:
