@@ -2,7 +2,7 @@
 
 SECONDS=0
 
-dirs=(codebuild alb ec2 permissions network)
+dirs=(codebuild ec2 permissions network)
 
 # Change into each directory and execute delete stack script
 for i in "${dirs[@]}"

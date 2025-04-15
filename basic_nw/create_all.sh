@@ -6,7 +6,7 @@ SECONDS=0
 #### For signature error, run the command
 sudo /usr/sbin/ntpdate pool.ntp.org
 
-dirs=(network permissions ec2 alb codebuild) 
+dirs=(network permissions ec2 codebuild) 
 
 # Change into each directory and execute create stack script 
 for i in "${dirs[@]}"

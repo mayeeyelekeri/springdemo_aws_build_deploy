@@ -1,0 +1,190 @@
+# File: alb.yaml 
+# This module creates all the "Load Balancer" related resources 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
+# Also make sure the "network" and "permissions" modules are already created 
+# 
+# Resource that would be created
+# 1) Listener on port 80 
+# 2) Target Group based on the application port (mostly 80)  
+# 3) Application Load Balancer 
+
+Description: "Create Application Load Balancer"
+
+#  "network" and "permission" modules should have been created already 
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Permissions stack 
+    Type: String
+    Default: perm
+    
+  ec2StackName:
+    Description: EC2 stack
+    Type: String
+    Default: ec2
+  
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+  albName:
+    Description: albForECS
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: albForECS
+    
+Resources:
+  
+  # Create a target group for application port
+  # This will only create the target group, EC2 instances are attached from the autoscaling group 
+  # Inputs: 
+  # 1) application Port from Parameter store (port 80)
+  # 2) VPC ID (from network stack)
+  #    
+  targetGroupBlue:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '{{resolve:ssm:/${environment}/alb/target_group_1}}'
+      Protocol: HTTP
+      Port: 80
+      VpcId: 
+        Fn::ImportValue: 
+         Fn::Sub: "${networkStackName}-VPCID"
+      TargetType: ip 
+      
+      # ***** Testing, no need to attach targets here 
+      Targets: 
+        - Id: 
+            Fn::ImportValue: 
+                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+      Tags:
+        - Key: Name
+          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupBlue"]]
+        - Key: Environment
+          Value: !Sub ${environment}
+
+  # 
+  # Create a target group for application port
+  # This will only create the target group, EC2 instances are attached from the autoscaling group 
+  # Inputs: 
+  # 1) application Port from Parameter store (port 8080)
+  # 2) VPC ID (from network stack)
+  #   
+  targetGroupGreen:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '{{resolve:ssm:/${environment}/alb/target_group_2}}'
+      Protocol: HTTP
+      Port: 8080
+      VpcId: 
+        Fn::ImportValue: 
+         Fn::Sub: "${networkStackName}-VPCID"
+      TargetType: ip 
+      
+      # ***** Testing, no need to attach targets here 
+      Targets: 
+        - Id: 
+            Fn::ImportValue: 
+                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+      Tags:
+        - Key: Name
+          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupGreen"]]
+        - Key: Environment
+          Value: !Sub ${environment}
+
+  # Create application load balancer and specify the subnets 
+  # No need to attach any "targets" at this point, it will be done by ECS service 
+  # Inputs: 
+  # 1) Security Group (from permissions stack) 
+  # 2) Public subnet 1 (from network stack)
+  # 3) Public subnet 2 (from network stack)
+  #    
+  alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${albName}
+      SecurityGroups: 
+        - Fn::ImportValue: 
+           Fn::Sub: "${permStackName}-PUBLIC-SG"
+      Subnets: 
+        - Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+        - Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
+
+  # Create a listener on port "80"
+  # Attach it to ALB 
+  # Forward the listener to "Target Group"
+  listenerBlueTraffic:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref alb
+      Port: 80
+      Protocol: HTTP
+      DefaultActions: 
+      - Type: "forward" 
+        ForwardConfig:
+          TargetGroups:
+           - TargetGroupArn: !Ref targetGroupBlue
+             Weight: 1
+  
+ # Create a listener on port "8080"
+  # Attach it to ALB 
+  # Forward the listener to "Target Group"
+  listenerGreenTraffic:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref alb
+      Port: 8080
+      Protocol: HTTP
+      DefaultActions: 
+      - Type: "forward" 
+        ForwardConfig:
+          TargetGroups:
+           - TargetGroupArn: !Ref targetGroupGreen
+             Weight: 1
+
+# Export the following 2 values 
+# 1) alb : alb-ALB 
+# 2) target group2 - alb-TARGET_GROUP1   
+# 3) target group2 - alb-TARGET_GROUP2
+Outputs:
+  LoadBalancer:
+    Value: !Ref alb
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-ALB"
+  
+  TargetGroupBlue:
+    Value: !Ref targetGroupBlue
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-TARGET-GROUP-BLUE"
+                      
+  TargetGroupGreen:
+    Value: !Ref targetGroupGreen
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-TARGET-GROUP-GREEN"
+
+  ListenerBlueTraffic:
+    Value: !Ref listenerBlueTraffic
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-LISTENER-BLUE-TRAFFIC" 
+        
+  ListenerGreenTraffic:
+    Value: !Ref listenerGreenTraffic
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-LISTENER-GREEN-TRAFFIC"
+              

@@ -156,7 +156,7 @@ Resources:
                 ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
                 DeploymentGroupName: 
                   Fn::ImportValue: 
-                     Fn::Sub: "${codedeployStackName}-CODEDEPLOY-EC2-GROUP"
+                     Fn::Sub: "${codedeployStackName}-DEPLOY-GROUP"
               InputArtifacts:
                 - Name: buildartifacts
       ArtifactStore:

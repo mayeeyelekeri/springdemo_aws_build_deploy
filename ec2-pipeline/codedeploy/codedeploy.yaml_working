@@ -55,11 +55,10 @@ Resources:
   #  From Parameter store
   #  1) codedeploy application name  
   # 
-  codeDeployEC2Project: 
+  myCodeDeployProject: 
     Type: AWS::CodeDeploy::Application
     Properties: 
-      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
-      ComputePlatform: Server
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}' 
       Tags:
        - Key: Name
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
@@ -72,11 +71,11 @@ Resources:
   # 2) codedeploy service role reference (from Permissions Stack)
   # 3) EC2 tag name 
   # 
-  codeDeployEC2DeploymentGroup: 
+  myDeployGroup: 
     Type: AWS::CodeDeploy::DeploymentGroup
     Properties: 
-      DeploymentGroupName: EC2InstanceCodeDeploymentGroup 
-      ApplicationName: !Ref codeDeployEC2Project
+      DeploymentGroupName: mydeploygroup 
+      ApplicationName: !Ref myCodeDeployProject
       ServiceRoleArn: 
         Fn::ImportValue: 
            Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
@@ -93,17 +92,16 @@ Resources:
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
        - Key: Environment
          Value: !Sub ${environment}
-         
+
 Outputs:
-  CodeDeployGroupEC2Group:
-    Value: !Ref codeDeployEC2DeploymentGroup
+  CodeDeployGroup:
+    Value: !Ref myDeployGroup
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-GROUP"
-        
-  CodeDeployEC2Project:
-    Value: !Ref codeDeployEC2Project
+        Fn::Sub: "${AWS::StackName}-DEPLOY-GROUP"
+  #
+  CodeDeployProject:
+    Value: !Ref myCodeDeployProject
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-PROJECT"
-        
+        Fn::Sub: "${AWS::StackName}-DEPLOY-PROJECT"
