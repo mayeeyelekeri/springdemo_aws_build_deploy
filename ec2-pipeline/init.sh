@@ -18,7 +18,7 @@ echo environment is $environment
 # Initialize all basic 
 (cd ../basic_nw; ./init.sh $1) 
 
-./ecs/init.sh $1
+(cd ecs; ./init.sh $1)
 ./codedeploy/init.sh $1
 ./codepipeline/init.sh $1
 

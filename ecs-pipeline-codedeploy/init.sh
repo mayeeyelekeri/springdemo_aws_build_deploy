@@ -16,7 +16,7 @@ sudo /usr/sbin/ntpdate pool.ntp.org
 echo environment is $environment 
 
 # Initialize all basic 
-#(cd ../basic_nw; ./init.sh $1) 
+(cd ../basic_nw; ./init.sh $1) 
 
 ./alb/init.sh $1
 (cd ecs; ./init.sh $1)
