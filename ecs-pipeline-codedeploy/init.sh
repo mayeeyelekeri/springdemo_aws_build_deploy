@@ -21,7 +21,7 @@ echo environment is $environment
 ./alb/init.sh $1
 (cd ecs; ./init.sh $1)
 
-(cd codedeploy; ./init.sh $1)
+# (cd codedeploy; ./init.sh $1)
 
 ./codepipeline/init.sh $1
 
