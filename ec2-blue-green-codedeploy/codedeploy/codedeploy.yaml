@@ -57,76 +57,39 @@ Resources:
   #  From Parameter store
   #  1) codedeploy application name  
   # 
-  codeDeployECSProject: 
+  codeDeployEC2Project: 
     Type: AWS::CodeDeploy::Application
     Properties: 
       ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
-      ComputePlatform: ECS
+      ComputePlatform: Server
       Tags:
        - Key: Name
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
        - Key: Environment
          Value: !Sub ${environment}
-
+#
   # Create CodeDeploy Deployment group ]    
   # Inputs: 
   # 1) codedeploy application reference
   # 2) codedeploy service role reference (from Permissions Stack)
   # 3) EC2 tag name 
   # 
-  codeDeployECSDeploymentGroup: 
+  codeDeployEC2DeploymentGroup: 
     Type: AWS::CodeDeploy::DeploymentGroup
     Properties: 
-      DeploymentGroupName: ECSCodeDeploymentGroup 
-      ApplicationName: !Ref codeDeployECSProject
+      DeploymentGroupName: EC2InstanceCodeDeploymentGroup 
+      ApplicationName: !Ref codeDeployEC2Project
       ServiceRoleArn: 
         Fn::ImportValue: 
            Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
-      DeploymentConfigName: CodeDeployDefault.ECSAllAtOnce
-      
-      ECSServices:   
-        - ClusterName: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}'
-          ServiceName: !Sub '{{resolve:ssm:/${environment}/ecs/service_name}}'
-          
-      DeploymentStyle:  
-         DeploymentOption: WITH_TRAFFIC_CONTROL
-         DeploymentType: BLUE_GREEN
-         
-      BlueGreenDeploymentConfiguration: 
-        DeploymentReadyOption: 
-            ActionOnTimeout: CONTINUE_DEPLOYMENT
-            WaitTimeInMinutes: 0
-        TerminateBlueInstancesOnDeploymentSuccess: 
-            Action: TERMINATE
-            TerminationWaitTimeInMinutes: 1
-      # 
-      AutoRollbackConfiguration:
-         Enabled: true
-         Events:
-         - DEPLOYMENT_FAILURE
-         - DEPLOYMENT_STOP_ON_REQUEST
-               
-      LoadBalancerInfo: 
-#        ElbInfoList: 
-#            - Name: 
-#                Fn::ImportValue: 
-#                  Fn::Sub: "${albStackName}-ALB" 
-#        TargetGroupInfoList:
-#            - Name: 
-#                Fn::ImportValue: 
-#                  Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE" 
-        TargetGroupPairInfoList: 
-          - ProdTrafficRoute: 
-              ListenerArns:
-                - Fn::ImportValue: 
-                    Fn::Sub: "${albStackName}-LISTENER-BLUE-TRAFFIC" 
-            TestTrafficRoute:
-              ListenerArns:
-                - Fn::ImportValue: 
-                    Fn::Sub: "${albStackName}-LISTENER-GREEN-TRAFFIC"  
-            TargetGroups:
-                - Name: !Sub '{{resolve:ssm:/${environment}/alb/target_group_1}}'
-                - Name: !Sub '{{resolve:ssm:/${environment}/alb/target_group_2}}'
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      Ec2TagFilters: 
+       - Key: Name 
+         Value:  
+           Fn::ImportValue: 
+             Fn::Sub: "${ec2StackName}-PUBLIC-INSTANCE-NAME"
+         Type: "KEY_AND_VALUE"
+
       Tags:
        - Key: Name
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
@@ -134,15 +97,17 @@ Resources:
          Value: !Sub ${environment}
          
 Outputs:
-  CodeDeployGroupECSGroup:
-    Value: !Ref codeDeployECSDeploymentGroup
+  CodeDeployGroupEC2Group:
+    Value: !Ref codeDeployEC2DeploymentGroup
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ECS-GROUP"
+        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-GROUP"
         
-  CodeDeployECSProject:
-    Value: !Ref codeDeployECSProject
+  CodeDeployEC2Project:
+    Value: !Ref codeDeployEC2Project
     Export:
       "Name" :
-        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ECS-PROJECT"
+        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-PROJECT" 
+  
+  
         
