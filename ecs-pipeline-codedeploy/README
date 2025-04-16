@@ -1,0 +1,12 @@
+This project simulates the CodePipeline deployment for ECS (no CodeDeploy is involved here) 
+
+- As soon as there is a code change, pipeline is triggered 
+
+- Code is built using CodeBuild and image is uploaded to ECR 
+
+- Also "imagedefinitions.json" file is created as part of build and uploaded to S3 codepipeline bucket.
+  And this file is used by codepipeline to identify the image and task information. 
+   
+- No CodeDeploy is used here 
+
+- No EC2 is used 

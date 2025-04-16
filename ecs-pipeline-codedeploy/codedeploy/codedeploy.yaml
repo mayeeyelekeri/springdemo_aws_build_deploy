@@ -9,7 +9,7 @@
 # 2) CodeDeploy Deployment group 
 # 
 # Reference: https://tech.metalab.com/ecs-blue-green-deployment-pipelines-with-codepipeline-codedeploy-9b7039084d57
-
+# https://amlanscloud.com/bluegreenpost/
 
 Description: "Create CodeDeploy project and deployment group"
 
