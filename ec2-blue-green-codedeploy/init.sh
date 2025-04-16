@@ -19,11 +19,10 @@ echo environment is $environment
 (cd ../basic_nw; ./init.sh $1) 
 
 ./alb/init.sh $1
-(cd ecs; ./init.sh $1)
 
-# (cd codedeploy; ./init.sh $1)
+#(cd codedeploy; ./init.sh $1)
 
-./codepipeline/init.sh $1
+#./codepipeline/init.sh $1
 
 
 start=$(date +%s) 
