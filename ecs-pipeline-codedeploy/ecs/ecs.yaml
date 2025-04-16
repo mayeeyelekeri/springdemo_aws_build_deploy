@@ -104,7 +104,7 @@ Resources:
              Protocol: tcp 
          Environment: 
             - Name: WELCOME_MESSAGE
-              Value: "this is message from the stack"
+              Value: "this message is from the stack2"
             - Name: IP_ADDRESS
               Value: "10.0.0.0"
 
@@ -169,10 +169,10 @@ Resources:
       PlatformVersion: LATEST
       
       # 
-      # ****** Integration with CodeDeploy, have a Hood problem for BLUE-GREEN 
+      # ****** Integration with CodeDeploy, have a problem for BLUE-GREEN 
       # 
-      DeploymentController:
-          Type: CODE_DEPLOY
+      #DeploymentController:
+      #    Type: CODE_DEPLOY
       ServiceConnectConfiguration:
           Enabled: false
               
@@ -210,10 +210,10 @@ Outputs:
           "Name" :
             Fn::Sub: "${AWS::StackName}-ECS-SERVICE-ARN" 
       
-  MyRepositoryPath: 
-    Description: ECR Repo 
+  RepositoryPath: 
+    Description: ECR Repo Path
     Value: !Sub '{{resolve:ssm:/${environment}/ecs/ecr_repository}}'                 
 
-  MyRepositoryArn: 
-    Description: ECR Repo 
+  RepositoryArn: 
+    Description: ECR Repo Arn
     Value: !Sub '{{resolve:ssm:/${environment}/ecs/ecr_repository_arn}}'                 

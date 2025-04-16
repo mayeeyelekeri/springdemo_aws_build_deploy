@@ -142,7 +142,7 @@ Resources:
   codebuildProjectForECS:
     Type: AWS::CodeBuild::Project
     Properties:
-     Name: springdemo_for_ecs
+     Name: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name_ecs}}' 
      Description: some build info 
 
      Source: 
