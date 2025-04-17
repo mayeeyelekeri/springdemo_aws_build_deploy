@@ -171,8 +171,8 @@ Resources:
       # 
       # ****** Integration with CodeDeploy, have a problem for BLUE-GREEN 
       # 
-      #DeploymentController:
-      #    Type: CODE_DEPLOY
+      DeploymentController:
+          Type: CODE_DEPLOY
       ServiceConnectConfiguration:
           Enabled: false
               

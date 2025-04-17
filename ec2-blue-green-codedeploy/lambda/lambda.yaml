@@ -1,0 +1,170 @@
+Description: "Create Lambda function "
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  autoscaleStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: autoscale
+
+  codebuildStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: codebuild
+
+  codedeployStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: codedeploy
+
+  codepipelineStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: codepipeline
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+  displayBucketFunctionName: 
+    Type: String 
+    Default: displayBuckets
+
+  randomNumberGenerator: 
+    Type: String 
+    Default: rand
+
+  lambdaRoleName: 
+    Type: String 
+    Default: myLambdaRole
+
+Resources:
+
+  # Lambda function to display all buckets 
+  # To invoke from command line: 
+  #  aws lambda invoke --function-name displayBuckets $(tty) >/dev/null
+  displayBucketsFunction:
+    Description: "Create Lambda function"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${displayBucketFunctionName} 
+      Role: !GetAtt lambdaRole.Arn
+      Runtime: python3.12
+      Handler: index.my_handler 
+      Code: 
+        ZipFile: | 
+          import os 
+          def my_handler(event, context):
+            message = "Buckets : " + os.environ['codepipeline_bucket'] + ", " + os.environ['build_bucket']
+            print("Build Bucket = " + os.environ['build_bucket']) 
+            print("Code Pipeline Bucket = " + os.environ['codepipeline_bucket']) 
+            return message 
+      Environment: 
+        Variables:
+          build_bucket: 
+            Fn::ImportValue: 
+               Fn::Sub: "${codebuildStackName}-CODEBUILD-BUCKET" 
+          codepipeline_bucket: 
+            Fn::ImportValue: 
+               Fn::Sub: "${codepipelineStackName}-CODEPIPELINE-BUCKET" 
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "LAMBDA"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+
+  # Lambda function to generate a randome number 
+  # To invoke from command line: 
+  #  aws lambda invoke --function-name rand $(tty) >/dev/null
+  randomNumberFunction:
+    Description: "Generate a random number"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${randomNumberGenerator} 
+      Role: !GetAtt lambdaRole.Arn
+      Runtime: python3.12
+      Handler: index.lambda_handler 
+      Code: 
+        ZipFile: | 
+          from __future__ import print_function
+          from random import randint
+          print('Loading function')
+
+          def lambda_handler(event, context):
+           myNumber = randint(0,100)
+           print("Random No. [ %s ]" % myNumber)
+           return myNumber
+      # If the code is located in S3, this is all needed 
+      #Code: 
+      #  S3Bucket: <bucke-name>
+      #  S3Key: <zip-file-name> 
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "LAMBDA RANDOM"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+  
+  # Make the current version as version 1 "v1" 
+  randVersion: 
+    Type: AWS::Lambda::Version 
+    Properties: 
+      FunctionName: !Ref randomNumberFunction 
+      Description: v1 
+      
+  # Create an alias to version1 as the env name 
+  randAlias:
+    Type: AWS::Lambda::Alias
+    Properties:
+      FunctionName: !Ref randomNumberFunction
+      FunctionVersion: !GetAtt randVersion.Version
+      Name: !Sub ${environment} 
+
+  lambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub lambdaRoleName
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com 
+            Action: sts:AssumeRole
+
+  # 
+  #invokeLambda:
+  # 
+  #  Type: AWS::CloudFormation::CustomResource
+  #  Properties:
+  #    ServiceToken: !GetAtt displayBucketsFunction.Arn
+
+  #invokeRandom:
+  #  Type: AWS::CloudFormation::CustomResource
+  #  DependsOn: randomNumberFunction
+  #  Properties:
+  #    ServiceToken: !GetAtt randomNumberFunction.Arn
+
+Outputs:
+  LambdaDisplayBucket:
+    Value: !Ref displayBucketsFunction
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-DISPLAY-BUCKET"
+

@@ -36,11 +36,11 @@ Parameters:
       - prod 
 
   albName:
-    Description: albForECS
+    Description: albForEC2
     Type: String
     MinLength: 1
     MaxLength: 255
-    Default: albForECS
+    Default: albForEC2
     
 Resources:
   
@@ -59,13 +59,13 @@ Resources:
       VpcId: 
         Fn::ImportValue: 
          Fn::Sub: "${networkStackName}-VPCID"
-      TargetType: ip 
+      TargetType: instance 
       
       # ***** Testing, no need to attach targets here 
-      Targets: 
-        - Id: 
-            Fn::ImportValue: 
-                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+#      Targets: 
+#        - Id: 
+#            Fn::ImportValue: 
+#                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
       Tags:
         - Key: Name
           Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupBlue"]]
@@ -88,13 +88,13 @@ Resources:
       VpcId: 
         Fn::ImportValue: 
          Fn::Sub: "${networkStackName}-VPCID"
-      TargetType: ip 
+      TargetType: instance 
       
       # ***** Testing, no need to attach targets here 
-      Targets: 
-        - Id: 
-            Fn::ImportValue: 
-                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+#      Targets: 
+#        - Id: 
+#            Fn::ImportValue: 
+#                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
       Tags:
         - Key: Name
           Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupGreen"]]
@@ -102,7 +102,7 @@ Resources:
           Value: !Sub ${environment}
 
   # Create application load balancer and specify the subnets 
-  # No need to attach any "targets" at this point, it will be done by ECS service 
+  # No need to attach any "targets" at this point
   # Inputs: 
   # 1) Security Group (from permissions stack) 
   # 2) Public subnet 1 (from network stack)

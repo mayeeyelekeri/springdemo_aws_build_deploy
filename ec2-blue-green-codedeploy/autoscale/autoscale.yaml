@@ -34,17 +34,13 @@ Parameters:
   welcomeMessage: 
     Type: String 
     Default: cfn-init has a hand in this EC2 creation 
-    
+
+  autoscalingGroupName: 
+    Type: String 
+    Default: ec2AutoscalingGroup
+         
 # 2 Resources (EC2 Template, AutoScaling Group)
 Resources:
-
-  # Set a timeout of 06 minutes, else it fails 
-  ec2WaitCondition: 
-    Type: AWS::CloudFormation::WaitCondition
-    CreationPolicy: 
-      ResourceSignal:
-        Timeout: PT06M
-        
   # Create EC2 template and install httpd up and running 
   # Inputs: 
   #  Parameter store values 
@@ -58,7 +54,7 @@ Resources:
   #  
   #  6) WaitCondition from resource (10 minutes timeout) 
   #
-  myEC2template:
+  ec2template:
     Type: AWS::EC2::LaunchTemplate
 
    # Wait for 5 minutes max          
@@ -112,40 +108,29 @@ Resources:
                 docker: 
                   enabled: true 
                   ensureRunning: true 
-                                                        
-    Condition: createOnlyProdResources 
-    Properties:                                                                  
-       ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'                 
-       KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
-       InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
-       IamInstanceProfile:                                     
-          Fn::ImportValue:                                                        
-             Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE"
-       SecurityGroupIds:                                                          
-          - Fn::ImportValue:                                                      
-             Fn::Sub: "${permStackName}-PUBLIC-SG"                                
-       SubnetId:                                                                  
-          Fn::ImportValue:                                                        
-             Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"                        
-       VpcId:                                                                     
-          Fn::ImportValue:                                                        
-            Fn::Sub: "${networkStackName}-VPCID"                                  
-                                                                                  
-       UserData:                                                                  
-         Fn::Base64:                                                              
-           !Sub |                                                                 
-              #!/bin/bash -x                                                       
-              yum update -y
-              yum update -y aws-cfn-bootstrap
-              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource publicInstanceWithCInit --configsets setup --region ${AWS::Region}
-              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}
-
-       Tags:
-         - Key: Name
-           Value: !Join ["-", [Fn::Sub: "${AWS::StackName}", "PublicInstanceWithCInit"] ]
-         - Key: Environment
-           Value: !Sub ${environment}
-            
+#
+    Properties:
+      LaunchTemplateName: 
+        !Sub '{{resolve:ssm:/${environment}/autoscale/template_name}}'
+      LaunchTemplateData: 
+        SecurityGroupIds: 
+          - Fn::ImportValue: 
+             Fn::Sub: "${permStackName}-PUBLIC-SG"
+        InstanceType: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/instance_type}}'
+        ImageId: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/ami_id}}'
+        KeyName: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/keyname}}'
+        UserData:
+         Fn::Base64:
+          !Sub | 
+            #!/bin/bash
+            yum update -y
+            yum update -y aws-cfn-bootstrap
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ec2template --configsets setup --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ec2template --region ${AWS::Region}
+                                                              
   # Create an autoscaling group using the template above 
   # Inputs: 
   #  From Parameter store
@@ -159,13 +144,13 @@ Resources:
   #  
   #  6) EC2 Template reference 
   #
-  myAutoscalingGroup:
+  autoscalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AutoScalingGroupName: myautoscalinggroup
+      AutoScalingGroupName: !Sub autoscalingGroupName
       LaunchTemplate: 
-        LaunchTemplateId: !Ref myEC2template
-        Version: !GetAtt myEC2template.LatestVersionNumber
+        LaunchTemplateId: !Ref ec2template
+        Version: !GetAtt ec2template.LatestVersionNumber
       VPCZoneIdentifier: 
           - Fn::ImportValue: 
              Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
@@ -179,7 +164,9 @@ Resources:
           !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_desired}}'  
       TargetGroupARNs: 
           - Fn::ImportValue: 
-             Fn::Sub: "${albStackName}-TARGET-GROUP"
+             Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE"
+          - Fn::ImportValue: 
+             Fn::Sub: "${albStackName}-TARGET-GROUP-GREEN"
         
       Tags:
        - Key: Name
@@ -191,12 +178,12 @@ Resources:
 
 Outputs:
   LoadBalancer:
-    Value: !Ref myEC2template
+    Value: !Ref ec2template
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-TEMPLATE"
   AutoscaleGroup:
-    Value: !Ref myAutoscalingGroup
+    Value: !Ref autoscalingGroup
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-AUTOSCALE-GROUP"
