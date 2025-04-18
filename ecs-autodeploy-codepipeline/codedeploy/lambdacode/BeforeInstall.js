@@ -11,9 +11,9 @@
     var deploymentId = event.DeploymentId;
     var lifecycleEventHookExecutionId = event.LifecycleEventHookExecutionId;
     var validationTestResult = "Failed";
-    console.log($deploymentId); 
-    console.log($event); 
-    console.log($context); 
+    console.log(deploymentId); 
+    console.log(event); 
+    console.log(context); 
 
     // Perform AfterAllowTestTraffic validation tests here. Set the test result 
     // to "Succeeded" for this tutorial.
@@ -26,6 +26,8 @@
         lifecycleEventHookExecutionId: lifecycleEventHookExecutionId,
         status: validationTestResult // status can be 'Succeeded' or 'Failed'
     };
+    
+    console.log(params); 
     
     // Pass CodeDeploy the prepared validation test results.
     codedeploy.putLifecycleEventHookExecutionStatus(params, function(err, data) {
