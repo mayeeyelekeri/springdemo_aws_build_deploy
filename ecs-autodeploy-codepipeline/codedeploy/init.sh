@@ -30,7 +30,7 @@ $cmd
 
 # Create a lambda function to perform validation test of application 
 cmd="aws lambda create-function --function-name BeforeInstall \
-        --zip-file fileb://BeforeInstall.zip \
+        --zip-file fileb://lambdacode/BeforeInstall.zip \
         --handler BeforeInstall.handler \
         --runtime nodejs16.x \
         --role $lambda_role_arn"
@@ -39,7 +39,7 @@ $cmd
 
 # Create a lambda function to perform validation test of application 
 cmd="aws lambda create-function --function-name AfterInstall \
-        --zip-file fileb://AfterInstall.zip \
+        --zip-file fileb://lambdacode/AfterInstall.zip \
         --handler AfterInstall.handler \
         --runtime nodejs16.x \
         --role $lambda_role_arn"
@@ -48,7 +48,7 @@ $cmd
 
 # Create a lambda function to perform validation test of application 
 cmd="aws lambda create-function --function-name AfterAllowTestTraffic \
-        --zip-file fileb://AfterAllowTestTraffic.zip \
+        --zip-file fileb://lambdacode/AfterAllowTestTraffic.zip \
         --handler AfterAllowTestTraffic.handler \
         --runtime nodejs16.x \
         --role $lambda_role_arn"
@@ -57,7 +57,7 @@ $cmd
 
 # Create a lambda function to perform validation test of application 
 cmd="aws lambda create-function --function-name BeforeAllowTraffic \
-        --zip-file fileb://BeforeAllowTraffic.zip \
+        --zip-file fileb://lambdacode/BeforeAllowTraffic.zip \
         --handler BeforeAllowTraffic.handler \
         --runtime nodejs16.x \
         --role $lambda_role_arn"
@@ -66,7 +66,7 @@ $cmd
 
 # Create a lambda function to perform validation test of application 
 cmd="aws lambda create-function --function-name AfterAllowTraffic \
-        --zip-file fileb://AfterAllowTraffic.zip \
+        --zip-file fileb://lambdacode/AfterAllowTraffic.zip \
         --handler AfterAllowTraffic.handler \
         --runtime nodejs16.x \
         --role $lambda_role_arn"
