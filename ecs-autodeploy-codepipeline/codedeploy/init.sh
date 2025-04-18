@@ -29,10 +29,46 @@ echo "cmd: $cmd"
 $cmd
 
 # Create a lambda function to perform validation test of application 
-cmd="aws lambda create-function --function-name $function_name \
+cmd="aws lambda create-function --function-name BeforeInstall \
+        --zip-file fileb://BeforeInstall.zip \
+        --handler BeforeInstall.handler \
+        --runtime nodejs16.x \
+        --role $lambda_role_arn"
+echo "cmd: $cmd" 
+$cmd
+
+# Create a lambda function to perform validation test of application 
+cmd="aws lambda create-function --function-name AfterInstall \
+        --zip-file fileb://AfterInstall.zip \
+        --handler AfterInstall.handler \
+        --runtime nodejs16.x \
+        --role $lambda_role_arn"
+echo "cmd: $cmd" 
+$cmd
+
+# Create a lambda function to perform validation test of application 
+cmd="aws lambda create-function --function-name AfterAllowTestTraffic \
         --zip-file fileb://AfterAllowTestTraffic.zip \
         --handler AfterAllowTestTraffic.handler \
-        --runtime nodejs22.x \
+        --runtime nodejs16.x \
+        --role $lambda_role_arn"
+echo "cmd: $cmd" 
+$cmd
+
+# Create a lambda function to perform validation test of application 
+cmd="aws lambda create-function --function-name BeforeAllowTraffic \
+        --zip-file fileb://BeforeAllowTraffic.zip \
+        --handler BeforeAllowTraffic.handler \
+        --runtime nodejs16.x \
+        --role $lambda_role_arn"
+echo "cmd: $cmd" 
+$cmd
+
+# Create a lambda function to perform validation test of application 
+cmd="aws lambda create-function --function-name AfterAllowTraffic \
+        --zip-file fileb://AfterAllowTraffic.zip \
+        --handler AfterAllowTraffic.handler \
+        --runtime nodejs16.x \
         --role $lambda_role_arn"
 echo "cmd: $cmd" 
 $cmd
