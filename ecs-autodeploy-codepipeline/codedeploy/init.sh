@@ -3,7 +3,6 @@
 # just call the script which takes care of creating parameters 
 . ~/INFO/secrets/codedeploy_params.sh  $1
  
-function_name="AfterAllowTestTraffic"
 iam_role_name="lambda-cli-hook-role2"
 iam_policy_name="myLambdaExecutionRole2"
 
@@ -78,12 +77,6 @@ function_arn=`aws lambda get-function --function-name AfterAllowTestTraffic --qu
 echo "function: $function_arn"
 
 # Add additional parameters 
-aws ssm put-parameter \
-            --name "/dev/codedeploy/function_name" \
-            --type "String" \
-            --value $function_name \
-            --overwrite
-
 aws ssm put-parameter \
             --name "/dev/codedeploy/function_arn" \
             --type "String" \

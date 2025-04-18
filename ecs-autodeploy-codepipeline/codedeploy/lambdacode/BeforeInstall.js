@@ -8,10 +8,12 @@
     console.log("Entering BeforeInstall hook.");
     
     // Read the DeploymentId and LifecycleEventHookExecutionId from the event payload
-  var deploymentId = event.DeploymentId;
+    var deploymentId = event.DeploymentId;
     var lifecycleEventHookExecutionId = event.LifecycleEventHookExecutionId;
     var validationTestResult = "Failed";
-    
+    console.log("deploymentId: ${deploymentId}"); 
+    console.log("event info: ${event}"); 
+    console.log("context: ${context}"); 
     // Perform AfterAllowTestTraffic validation tests here. Set the test result 
     // to "Succeeded" for this tutorial.
     console.log("This is where BeforeInstall validation tests happen.")
