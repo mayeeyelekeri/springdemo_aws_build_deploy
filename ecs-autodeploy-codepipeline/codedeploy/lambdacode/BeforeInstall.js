@@ -14,6 +14,7 @@
     console.log("deploymentId: ${deploymentId}"); 
     console.log("event info: ${event}"); 
     console.log("context: ${context}"); 
+
     // Perform AfterAllowTestTraffic validation tests here. Set the test result 
     // to "Succeeded" for this tutorial.
     console.log("This is where BeforeInstall validation tests happen.")
