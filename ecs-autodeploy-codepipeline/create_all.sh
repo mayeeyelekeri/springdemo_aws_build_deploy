@@ -4,7 +4,7 @@
 SECONDS=0
 
 #### For signature error, run the command
-sudo /usr/sbin/ntpdate pool.ntp.org
+sudo /home/vagrant/scripts/clock_reset.sh
 
 # Create the basis stack (will create network permissions alb codebuild)  
 (cd ../basic_nw && ./create_all.sh) 

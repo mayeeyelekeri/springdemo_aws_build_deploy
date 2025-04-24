@@ -73,7 +73,7 @@ echo "cmd: $cmd"
 $cmd
 
 ##### Wait for a few seconds before the role gets created 
-sleep 5 
+sleep 10 
 
 # list ARN of Lambda function 
 function_arn=`aws lambda get-function --function-name AfterAllowTestTraffic --query "Configuration.FunctionArn"`

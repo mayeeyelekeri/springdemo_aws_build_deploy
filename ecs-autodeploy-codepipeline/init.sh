@@ -9,7 +9,7 @@ if [ $1 ]; then
 fi
  
 #### For signature error, run the command
-sudo /usr/sbin/ntpdate pool.ntp.org
+sudo /home/vagrant/scripts/clock_reset.sh
 
 . ~/INFO/secrets/aws_secrets.sh 
 
