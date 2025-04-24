@@ -81,7 +81,7 @@ Resources:
               - install_base_packages                     
               - install_code_deploy_agent
               - install_docker
-              - install cloudwatch_agent 
+              - install_cloudwatch_agent 
           install_base_packages:
             commands:
                 "updates": 
