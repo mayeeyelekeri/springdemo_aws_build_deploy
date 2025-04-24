@@ -125,7 +125,7 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}	
 
-  # Create EC2 instance role with S3 access  
+  # Create EC2 instance role with S3, cloudwatch access   
   ec2InstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -149,7 +149,16 @@ Resources:
                   - s3:PutObject
                   - s3:GetObjectVersion
                 Resource: '*'
-
+        
+        - PolicyName: Cloudwatch_access 
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: '*'
   # Create EC2 Instance profile with the role above for S3 access 
   ec2InstanceProfile:
     Description: "EC2 Instance profile with S3 access" 
