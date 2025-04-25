@@ -273,6 +273,7 @@ Resources:
               Action:
                 - sts:AssumeRole
         Policies:
+          # Basic lambda role 
           - PolicyName: "AWSLambdaBasicExecutionRole"
             PolicyDocument:
               Version: "2012-10-17"
@@ -284,7 +285,27 @@ Resources:
                       - logs:CreateLogStream
                       - logs:PutLogEvents
                     Resource: "*"
-
+          - PolicyName: "CodeDeployEventChange"
+            PolicyDocument: 
+             Version: "2012-10-17"
+             Statement: 
+                - 
+                  Effect: "Allow"
+                  Action: 
+                    - codedeploy:PutLifecycleEventHookExecutionStatus
+                  Resource: "*"
+          # S3 accesss
+          - PolicyName: "S3Access"
+            PolicyDocument: 
+             Version: "2012-10-17"
+             Statement: 
+                - 
+                  Effect: "Allow"
+                  Action: 
+                    - s3:*
+                  Resource: "*"
+ 
+           
 # Export all the values 
 # 1) Code deploy service role Arn: perm2-CODEDEPLOY-SERVICE-ROLE-ARN
 # 2) Code pipeline service role Arn: perm2-CODEPIPELINE-SERVICE-ROLE-ARN
@@ -307,3 +328,9 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-ECS-EXECUTION-ROLE-ARN"   
+ #
+  LambdaExecutionRoleArn:
+   Value: !GetAtt lambdaRole.Arn 
+   Export:
+     "Name" :
+       Fn::Sub: "${AWS::StackName}-LAMBDA-EXECUTION-ROLE-ARN" 
