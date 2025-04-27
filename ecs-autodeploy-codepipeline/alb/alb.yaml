@@ -163,7 +163,13 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-ALB"
-  
+ 
+  LoadBalancerDns:
+    Value: !GetAtt alb.DNSName
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-DNS-NAME"
+          
   TargetGroupBlue:
     Value: !Ref targetGroupBlue
     Export:
