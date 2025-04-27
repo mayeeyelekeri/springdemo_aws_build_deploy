@@ -3,7 +3,7 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: "arn:aws:ecs:us-east-1:533267334585:task-definition/springdemo:1"
+        TaskDefinition: "arn:aws:ecs:us-east-1:767397668494:task-definition/springdemo:1"
         LoadBalancerInfo:
           ContainerName: "SpringDemo"
           ContainerPort: 80

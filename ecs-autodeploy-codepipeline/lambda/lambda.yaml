@@ -30,10 +30,26 @@ Parameters:
   randomNumberGenerator: 
     Type: String 
     Default: rand
-
-  lambdaRoleName: 
+ 
+  beforeInstallFunctionName: 
     Type: String 
-    Default: myLambdaRole
+    Default: BeforeInstall
+
+  afterInstallFunctionName: 
+    Type: String 
+    Default: AfterInstall
+    
+  beforeAllowTrafficFunctionName: 
+    Type: String 
+    Default: BeforeAllowTraffic
+
+  afterAllowTrafficFunctionName: 
+    Type: String 
+    Default: AfterAllowTraffic
+
+  afterAllowTestTrafficFunctionName: 
+    Type: String 
+    Default: AfterAllowTestTraffic
 
 Resources:
 
@@ -107,7 +123,116 @@ Resources:
       FunctionVersion: !GetAtt randVersion.Version
       Name: !Sub ${environment} 
 
-  # 
+  # BeforeInstall codedeploy function  
+  # To invoke from command line: 
+  beforeInstallFunction:
+    Description: Fn::Sub "${beforeInstallFunctionName}"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${beforeInstallFunctionName} 
+      Role: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-LAMBDA-EXECUTION-ROLE-ARN"
+      Runtime: nodejs16.x
+      Handler: BeforeInstall.handler 
+      Code: 
+        S3Bucket: !Sub '{{resolve:ssm:/${environment}/codebuild/bucket_name}}'
+        S3Key: !Join [".", [Fn::Sub: "${beforeInstallFunctionName}",'zip']] 
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", !Sub "${beforeInstallFunctionName}" ] ]
+       - Key: Environment
+         Value: !Sub ${environment} 
+  
+  # AfterInstall codedeploy function  
+  # To invoke from command line: 
+  afterInstallFunction:
+    Description: Fn::Sub "${afterInstallFunctionName}"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${afterInstallFunctionName} 
+      Role: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-LAMBDA-EXECUTION-ROLE-ARN"
+      Runtime: nodejs16.x
+      Handler: BeforeInstall.handler
+      Code: 
+        S3Bucket: !Sub '{{resolve:ssm:/${environment}/codebuild/bucket_name}}'
+        S3Key: !Join [".", [Fn::Sub: "${afterInstallFunctionName}",'zip']] 
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", !Sub "${afterInstallFunctionName}" ] ]
+       - Key: Environment
+         Value: !Sub ${environment} 
+         
+  # BeforeAllowTraffic codedeploy function  
+  # To invoke from command line: 
+  beforeAllowTrafficFunction:
+    Description: Fn::Sub "${beforeAllowTrafficFunctionName}"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${beforeAllowTrafficFunctionName} 
+      Role: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-LAMBDA-EXECUTION-ROLE-ARN"
+      Runtime: nodejs16.x
+      Handler: BeforeInstall.handler
+      Code: 
+        S3Bucket: !Sub '{{resolve:ssm:/${environment}/codebuild/bucket_name}}'
+        S3Key: !Join [".", [Fn::Sub: "${beforeAllowTrafficFunctionName}",'zip']] 
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", !Sub "${beforeAllowTrafficFunctionName}" ] ]
+       - Key: Environment
+         Value: !Sub ${environment} 
+         
+  # afterAllowTraffic codedeploy function  
+  # To invoke from command line: 
+  afterAllowTrafficFunction:
+    Description: Fn::Sub "${afterAllowTrafficFunctionName}"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${afterAllowTrafficFunctionName} 
+      Role: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-LAMBDA-EXECUTION-ROLE-ARN"
+      Runtime: nodejs16.x
+      Handler: BeforeInstall.handler 
+      Code: 
+        S3Bucket: !Sub '{{resolve:ssm:/${environment}/codebuild/bucket_name}}'
+        S3Key: !Join [".", [Fn::Sub: "${afterAllowTrafficFunctionName}",'zip']] 
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", !Sub "${afterAllowTrafficFunctionName}" ] ]
+       - Key: Environment
+         Value: !Sub ${environment} 
+          
+  # afterAllowTestTraffic codedeploy function  
+  # To invoke from command line: 
+  afterAllowTestTrafficFunction:
+    Description: Fn::Sub "${afterAllowTestTrafficFunctionName}"
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${afterAllowTestTrafficFunctionName} 
+      Role: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-LAMBDA-EXECUTION-ROLE-ARN"
+      Runtime: nodejs16.x
+      Handler: BeforeInstall.handler
+      Code: 
+        S3Bucket: !Sub '{{resolve:ssm:/${environment}/codebuild/bucket_name}}'
+        S3Key: !Join [".", [Fn::Sub: "${afterAllowTestTrafficFunctionName}",'zip']] 
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", !Sub "${afterAllowTestTrafficFunctionName}" ] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
   #invokeLambda:
   # 
   #  Type: AWS::CloudFormation::CustomResource

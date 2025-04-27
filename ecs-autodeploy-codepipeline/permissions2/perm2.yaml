@@ -82,6 +82,17 @@ Resources:
                         - s3:PutObject
                         - s3:GetObjectVersion
                     Resource: "*"
+
+          - PolicyName: "SSMAccess"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                  -
+                    Effect: "Allow"
+                    Action:
+                        - ssmmessages:*
+                    Resource: "*" 
+          
           - PolicyName: "autoscale"
             PolicyDocument:
               Version: "2012-10-17"
@@ -257,8 +268,27 @@ Resources:
                      - logs:CreateLogStream
                      - logs:PutLogEvents
                  Resource: "*"
-
-#
+       # 
+       - PolicyName: "SSMAccess"
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+            -
+              Effect: "Allow"
+              Action:
+                  - ssmmessages:*
+              Resource: "*" 
+ 
+       - PolicyName: "ECSExecutionAccess"
+         PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+             -
+               Effect: "Allow"
+               Action:
+                   - ecs:ExecuteCommand
+               Resource: "*"     
+               
   lambdaRole:
       Type: AWS::IAM::Role
       Properties:
