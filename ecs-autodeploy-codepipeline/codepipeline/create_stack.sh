@@ -1,4 +1,4 @@
-aws cloudformation create-stack --stack-name codepipeline --capabilities CAPABILITY_NAMED_IAM --template-body file://codepipeline.yaml $*
+aws cloudformation create-stack --stack-name codepipeline --capabilities CAPABILITY_NAMED_IAM --template-body file://codepipeline_ec2.yaml $*
 
 aws cloudformation wait stack-create-complete --stack-name codepipeline
 

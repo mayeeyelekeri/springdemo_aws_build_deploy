@@ -52,7 +52,23 @@ Parameters:
       - prod 
 
 Resources:
-  # Create CodeDeploy Application    
+  # Create CodeDeploy Application for EC2 deploy     
+  # Inputs: 
+  #  From Parameter store
+  #  1) codedeploy application name  
+  # 
+  codeDeployEC2Project: 
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+      ComputePlatform: Server
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "ec2"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+  # Create CodeDeploy Application for ECS 
   # Inputs: 
   #  From Parameter store
   #  1) codedeploy application name  
@@ -60,8 +76,44 @@ Resources:
   codeDeployECSProject: 
     Type: AWS::CodeDeploy::Application
     Properties: 
-      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name_ecs}}'
       ComputePlatform: ECS
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "ecs"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+         
+  # Create CodeDeploy Deployment group ]    
+  # Inputs: 
+  # 1) codedeploy application reference
+  # 2) codedeploy service role reference (from Permissions Stack)
+  # 3) EC2 tag name 
+  # 
+  codeDeployEC2DeploymentGroup: 
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      DeploymentGroupName: EC2CodeDeploymentGroup 
+      ApplicationName: !Ref codeDeployEC2Project
+      ServiceRoleArn: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      
+      Ec2TagFilters: 
+         - Key: Name 
+           Value:  
+             Fn::ImportValue: 
+               Fn::Sub: "${ec2StackName}-PUBLIC-INSTANCE-NAME"
+           Type: "KEY_AND_VALUE"
+               
+      AutoRollbackConfiguration:
+         Enabled: true
+         Events:
+         - DEPLOYMENT_FAILURE
+         - DEPLOYMENT_STOP_ON_REQUEST
+      
       Tags:
        - Key: Name
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
@@ -131,7 +183,7 @@ Resources:
        - Key: Name
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
        - Key: Environment
-         Value: !Sub ${environment}
+         Value: !Sub ${environment} 
          
 Outputs:
   CodeDeployGroupECSGroup:
@@ -145,4 +197,17 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ECS-PROJECT"
+  # 
+  CodeDeployGroupEC2Group:
+    Value: !Ref codeDeployEC2DeploymentGroup
+    Export:
+        "Name" :
+          Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-GROUP"
+          
+  CodeDeployEC2Project:
+    Value: !Ref codeDeployEC2Project
+    Export:
+        "Name" :
+          Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-PROJECT"
+          
         
