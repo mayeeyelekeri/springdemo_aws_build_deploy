@@ -2,7 +2,7 @@
 
 SECONDS=0
 
-dirs=(codedeploy ecs alb lambda permissions2)
+dirs=(codepipeline codedeploy ecs alb lambda permissions2)
 
 # Change into each directory and execute delete stack script
 for i in "${dirs[@]}"
