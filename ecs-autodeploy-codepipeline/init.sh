@@ -23,8 +23,7 @@ echo environment is $environment
 
 (cd codedeploy; ./init.sh $1)
 
-#./codepipeline/init.sh $1
-
+(cd codepipeline; ./init.sh $1)
 
 start=$(date +%s) 
 echo "Elapsed Time: $(($SECONDS / 60)) minutes and $(($SECONDS % 60)) seconds"

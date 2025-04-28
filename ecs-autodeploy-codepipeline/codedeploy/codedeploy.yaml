@@ -145,9 +145,13 @@ Resources:
          DeploymentType: BLUE_GREEN
          
       BlueGreenDeploymentConfiguration: 
+        
+        # Waiting time to verify the deployment is fine, can rollback from this state
         DeploymentReadyOption: 
-            ActionOnTimeout: CONTINUE_DEPLOYMENT
-            WaitTimeInMinutes: 0
+            ActionOnTimeout: STOP_DEPLOYMENT
+            WaitTimeInMinutes: 2
+            
+        # Waiting time before deleting previous deployment  
         TerminateBlueInstancesOnDeploymentSuccess: 
             Action: TERMINATE
             TerminationWaitTimeInMinutes: 1
