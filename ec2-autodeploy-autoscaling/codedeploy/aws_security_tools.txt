@@ -1,0 +1,19 @@
+GuardDuty
+GuardDuty is a threat detection service that continuously monitors your AWS accounts and workloads for malicious activity and delivers detailed security findings for visibility and remediation.
+
+Security Hub 
+When you enable Security Hub, it begins to consume, aggregate, organize, and prioritize findings from AWS services that you have enabled, such as Amazon GuardDuty, Amazon Inspector, and Amazon Macie.
+
+Personal Health Dashboard 
+The Personal Health Dashboard provides alerts and guidance for AWS events that might affect your environment.
+
+Macie
+Macie applies machine learning and pattern matching techniques to S3 buckets to identify sensitive data.
+
+Amazon Inspector 
+Inspector automatically discovers and scans Amazon EC2 instances and container images in ECR for software vulnerabilities and unintended network exposure.
+It provides security assessments of your applications settings and configurations
+
+Amazon Detective 
+Analyze and visualize security data to investigate potential security issues
+Amazon Detective automatically collects log data from your AWS resources and uses machine learning (ML), statistical analysis, and graph theory to build a dataset that you can use to conduct more efficient security investigations.
