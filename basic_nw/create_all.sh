@@ -6,7 +6,7 @@ SECONDS=0
 #### For signature error, run the command
 sudo /home/vagrant/scripts/clock_reset.sh
 
-dirs=(network permissions ec2 codebuild) 
+dirs=(network permissions utils ec2 codebuild) 
 
 # Change into each directory and execute create stack script 
 for i in "${dirs[@]}"

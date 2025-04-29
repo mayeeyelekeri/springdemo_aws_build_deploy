@@ -30,7 +30,12 @@ Parameters:
     Description: Name of the base stack with all network resources
     Type: String
     Default: autoscale
- 
+
+  utilsStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: utils 
+    
   environment: 
     Type: String 
     Default: dev 
@@ -68,7 +73,7 @@ Resources:
               Fn::ImportValue:                                                        
                 Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE-ARN"
                                                                                 
-          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/dockerImageID}}'                 
+          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/my_docker_image_id}}'                 
           KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
           InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
           SecurityGroupIds:                                                          
@@ -205,6 +210,7 @@ Resources:
       TargetGroupARNs: 
           - Fn::ImportValue: 
              Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE"
+      
         
       Tags:
        - Key: Name
@@ -214,6 +220,51 @@ Resources:
          Value: !Sub ${environment}	
          PropagateAtLaunch: true
 
+  # Warmpool could be created for additional servers.. to use this, change value to 1 
+  myWarmPool: 
+      Type: AWS::AutoScaling::WarmPool
+      Properties:
+        AutoScalingGroupName: !Ref scalingGroup
+        MinSize: '0'
+        PoolState: Stopped
+ 
+  # Take some action when EC2 is getting terminated "Terminating:Wait" state
+  # 5 minutes to take some action 
+  # Send a notification to SNS topic 
+  # 
+  myTerminationLifecycleHook: 
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties: 
+      AutoScalingGroupName: !Ref scalingGroup
+      LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+      HeartbeatTimeout: '300'
+      DefaultResult: CONTINUE
+      NotificationMetadata: "nothing imp"
+      NotificationTargetARN: arn:aws:sns:us-east-1:637423231407:mysns
+      RoleARN: 
+        Fn::ImportValue: 
+          Fn::Sub: "${perm2StackName}-AUTOSCALING-SNS-ROLE-ARN"     
+     
+  #
+  # Take some action when EC2 is getting creating "Pending:wait" state 
+  # 5 minutes to take some action 
+  # Send a notification to SNS topic 
+  # 
+  myCreationLifecycleHook: 
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties: 
+      AutoScalingGroupName: !Ref scalingGroup
+      LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
+      HeartbeatTimeout: '300'
+      DefaultResult: CONTINUE
+      NotificationMetadata: "nothing imp"
+      NotificationTargetARN:  
+         Fn::ImportValue: 
+            Fn::Sub: "${utilsStackName}-SNS-TOPIC-ARN"
+      RoleARN: 
+        Fn::ImportValue: 
+          Fn::Sub: "${perm2StackName}-AUTOSCALING-SNS-ROLE-ARN"   
+      
 Outputs:
   LoadBalancer:
     Value: !Ref template

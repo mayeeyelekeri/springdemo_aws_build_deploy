@@ -9,6 +9,10 @@ sudo /home/vagrant/scripts/clock_reset.sh
 # Create the basis stack (will create network permissions alb codebuild)  
 (cd ../basic_nw && ./create_all.sh) 
 
+# Delete EC2 instance which was started, we don't need that anymore here'
+
+`aws ec2 terminate-instances --instance-ids i-1234567890abcdef0
+
 dirs=(permissions2 lambda alb autoscale codedeploy codepipeline) 
 
 # Change into each directory and execute create stack script 
