@@ -38,22 +38,21 @@ Parameters:
       - dev
       - prod  
 
-  # 
-  Conditions: 
+Conditions: 
     createOnlyProdResources: 
       !Equals [ !Ref environment, "dev" ]
             
 Resources:
- ec2WaitCondition: 
-    Type: AWS::CloudFormation::WaitCondition
-    CreationPolicy: 
-      ResourceSignal:
-        Timeout: PT10M
+# ec2WaitCondition: 
+#    Type: AWS::CloudFormation::WaitCondition
+#    CreationPolicy: 
+#      ResourceSignal:
+#        Timeout: PT10M
 
  template:
     Type: AWS::EC2::LaunchTemplate
     Description: "Public instance with cfn-init, install codedeploy agent and docker"                        
-      
+          
       # Wait for 5 minutes max          
     CreationPolicy: 
       ResourceSignal:
@@ -110,40 +109,43 @@ Resources:
             commands:
              "updates": 
                "command": "yum install -y amazon-cloudwatch-agent"  
-     Condition: createOnlyProdResources 
-     Properties:                                                                  
-       ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'                 
-       KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
-       InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
-       IamInstanceProfile:                                     
-          Fn::ImportValue:                                                        
-             Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE"
-       SecurityGroupIds:                                                          
-          - Fn::ImportValue:                                                      
-             Fn::Sub: "${permStackName}-PUBLIC-SG"                                
-       SubnetId:                                                                  
-          Fn::ImportValue:                                                        
-             Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"                        
-       VpcId:                                                                     
-          Fn::ImportValue:                                                        
-            Fn::Sub: "${networkStackName}-VPCID"                                  
+    Condition: createOnlyProdResources 
+    Properties:  
+       LaunchTemplateName: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/template_name}}'  
+       LaunchTemplateData: 
+          IamInstanceProfile: 
+            Arn: 
+              Fn::ImportValue:                                                        
+                Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE-ARN"
+                                                                                
+          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'                 
+          KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
+          InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
+          SecurityGroupIds:                                                          
+            - Fn::ImportValue:                                                      
+               Fn::Sub: "${permStackName}-PUBLIC-SG"                                
+                               
                                                                                   
-       UserData:                                                                  
-         Fn::Base64:                                                              
-           !Sub |                                                                 
-              #!/bin/bash -x                                                       
+          UserData:                                                                  
+            Fn::Base64:                                                              
+             !Sub |                                                                 
+              #!/bin/bash -x  
               yum update -y
               yum update -y aws-cfn-bootstrap
-              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource publicInstanceWithCInit --configsets setup --region ${AWS::Region}
-              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}
-
-       Tags:
-         - Key: Name
-           Value: !Join ["-", [Fn::Sub: "${AWS::StackName}", "PublicInstanceWithCInit"] ]
-         - Key: Environment
-           Value: !Sub ${environment}
- 
-
+              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
+              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
+                                                     
+#              yum update -y
+#              yum install -y ruby
+#              wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
+#              chmod a+x install 
+#              ./install auto 
+#              yum install docker -y 
+#              usermod -aG docker ec2-user 
+#              yum install -y amazon-cloudwatch-agent
+#              systemctl start docker 
+#              systemctl enable docker 
  # AutoScaling Group 
  #     
  scalingGroup:
@@ -175,37 +177,6 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}	
          PropagateAtLaunch: true
-
- myInstanceProfile: 
-    Type: AWS::IAM::InstanceProfile
-    Properties: 
-      Path: "/"
-      Roles: 
-        - 
-          Ref: myInstanceRole
-
- myInstanceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: s3accesspolicy
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:GetObjectVersion
-                Resource: '*'
 
 Outputs:
   LoadBalancer:

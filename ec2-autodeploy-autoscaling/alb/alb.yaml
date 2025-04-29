@@ -59,13 +59,13 @@ Resources:
       VpcId: 
         Fn::ImportValue: 
          Fn::Sub: "${networkStackName}-VPCID"
-      TargetType: ip 
+      TargetType: instance 
       
       # ***** Testing, no need to attach targets here 
-      Targets: 
-        - Id: 
-            Fn::ImportValue: 
-                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+#      Targets: 
+#        - Id: 
+#            Fn::ImportValue: 
+#                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
       Tags:
         - Key: Name
           Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupBlue"]]
@@ -88,13 +88,13 @@ Resources:
       VpcId: 
         Fn::ImportValue: 
          Fn::Sub: "${networkStackName}-VPCID"
-      TargetType: ip 
+      TargetType: instance 
       
       # ***** Testing, no need to attach targets here 
-      Targets: 
-        - Id: 
-            Fn::ImportValue: 
-                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+#      Targets: 
+#        - Id: 
+#            Fn::ImportValue: 
+#                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
       Tags:
         - Key: Name
           Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupGreen"]]

@@ -68,22 +68,6 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}
 
-  # Create CodeDeploy Application for ECS 
-  # Inputs: 
-  #  From Parameter store
-  #  1) codedeploy application name  
-  # 
-  codeDeployECSProject: 
-    Type: AWS::CodeDeploy::Application
-    Properties: 
-      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name_ecs}}'
-      ComputePlatform: ECS
-      Tags:
-       - Key: Name
-         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "ecs"] ]
-       - Key: Environment
-         Value: !Sub ${environment}
-
          
   # Create CodeDeploy Deployment group ]    
   # Inputs: 
@@ -101,13 +85,10 @@ Resources:
            Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
       DeploymentConfigName: CodeDeployDefault.AllAtOnce
       
-      Ec2TagFilters: 
-         - Key: Name 
-           Value:  
-             Fn::ImportValue: 
-               Fn::Sub: "${ec2StackName}-PUBLIC-INSTANCE-NAME"
-           Type: "KEY_AND_VALUE"
-               
+      AutoScalingGroups:
+        - Fn::ImportValue: 
+           Fn::Sub: "${autoscaleStackName}-AUTOSCALE-GROUP"
+           
       AutoRollbackConfiguration:
          Enabled: true
          Events:
@@ -119,89 +100,8 @@ Resources:
          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
        - Key: Environment
          Value: !Sub ${environment}
-
-  # Create CodeDeploy Deployment group ]    
-  # Inputs: 
-  # 1) codedeploy application reference
-  # 2) codedeploy service role reference (from Permissions Stack)
-  # 3) EC2 tag name 
-  # 
-  codeDeployECSDeploymentGroup: 
-    Type: AWS::CodeDeploy::DeploymentGroup
-    Properties: 
-      DeploymentGroupName: ECSCodeDeploymentGroup 
-      ApplicationName: !Ref codeDeployECSProject
-      ServiceRoleArn: 
-        Fn::ImportValue: 
-           Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
-      DeploymentConfigName: CodeDeployDefault.ECSAllAtOnce
-      
-      ECSServices:   
-        - ClusterName: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}'
-          ServiceName: !Sub '{{resolve:ssm:/${environment}/ecs/service_name}}'
-          
-      DeploymentStyle:  
-         DeploymentOption: WITH_TRAFFIC_CONTROL
-         DeploymentType: BLUE_GREEN
-         
-      BlueGreenDeploymentConfiguration: 
-        
-        # Waiting time to verify the deployment is fine, can rollback from this state
-        DeploymentReadyOption: 
-            ActionOnTimeout: STOP_DEPLOYMENT
-            WaitTimeInMinutes: 2
-            
-        # Waiting time before deleting previous deployment  
-        TerminateBlueInstancesOnDeploymentSuccess: 
-            Action: TERMINATE
-            TerminationWaitTimeInMinutes: 1
-      # 
-      AutoRollbackConfiguration:
-         Enabled: true
-         Events:
-         - DEPLOYMENT_FAILURE
-         - DEPLOYMENT_STOP_ON_REQUEST
-               
-      LoadBalancerInfo: 
-#        ElbInfoList: 
-#            - Name: 
-#                Fn::ImportValue: 
-#                  Fn::Sub: "${albStackName}-ALB" 
-#        TargetGroupInfoList:
-#            - Name: 
-#                Fn::ImportValue: 
-#                  Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE" 
-        TargetGroupPairInfoList: 
-          - ProdTrafficRoute: 
-              ListenerArns:
-                - Fn::ImportValue: 
-                    Fn::Sub: "${albStackName}-LISTENER-BLUE-TRAFFIC" 
-            TestTrafficRoute:
-              ListenerArns:
-                - Fn::ImportValue: 
-                    Fn::Sub: "${albStackName}-LISTENER-GREEN-TRAFFIC"  
-            TargetGroups:
-                - Name: !Sub '{{resolve:ssm:/${environment}/alb/target_group_1}}'
-                - Name: !Sub '{{resolve:ssm:/${environment}/alb/target_group_2}}'
-      Tags:
-       - Key: Name
-         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
-       - Key: Environment
-         Value: !Sub ${environment} 
          
 Outputs:
-  CodeDeployGroupECSGroup:
-    Value: !Ref codeDeployECSDeploymentGroup
-    Export:
-      "Name" :
-        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ECS-GROUP"
-        
-  CodeDeployECSProject:
-    Value: !Ref codeDeployECSProject
-    Export:
-      "Name" :
-        Fn::Sub: "${AWS::StackName}-CODEDEPLOY-ECS-PROJECT"
-  # 
   CodeDeployGroupEC2Group:
     Value: !Ref codeDeployEC2DeploymentGroup
     Export:
