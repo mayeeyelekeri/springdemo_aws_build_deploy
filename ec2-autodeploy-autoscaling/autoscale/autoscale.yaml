@@ -49,66 +49,15 @@ Resources:
 #      ResourceSignal:
 #        Timeout: PT10M
 
- template:
+  template:
     Type: AWS::EC2::LaunchTemplate
-    Description: "Public instance with cfn-init, install codedeploy agent and docker"                        
+    Description: "My Template with codedeploy agent and docker"                        
           
       # Wait for 5 minutes max          
     CreationPolicy: 
       ResourceSignal:
         Timeout: PT5M     
-          
-    Metadata:
-     "AWS::CloudFormation::Init":
-          configSets:
-            setup:  
-              - install_base_packages                     
-              - install_code_deploy_agent
-              - install_docker
-              - install_cloudwatch_agent 
-          install_base_packages:
-            commands:
-                "updates": 
-                    "command": "yum update -y"
-                "ruby_install": 
-                    "command": "yum install -y ruby"
-                       
-          install_code_deploy_agent:
-            files:
-               "/home/ec2-user/install":
-                 source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
-                 mode: "000755"
-                 owner: root
-                 group: root
-            commands: 
-              "install_agent":
-                 "command": "./install auto" 
-                 "cwd": "/home/ec2-user" 
-#              "cfn-signal-back": 
-#                 "command": 
-#                    Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
-# 
-          install_docker:
-            packages:
-              yum:
-                docker: []
-            commands: 
-              "docker_perm": 
-                "command": 
-                  Fn::Sub: "usermod -aG docker ec2-user"
-#              "cfn-signal-back": 
-#                "command": 
-#                  Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}"
-            services: 
-              sysvinit: 
-                docker: 
-                  enabled: true 
-                  ensureRunning: true 
-          #
-          install_cloudwatch_agent:
-            commands:
-             "updates": 
-               "command": "yum install -y amazon-cloudwatch-agent"  
+    
     Condition: createOnlyProdResources 
     Properties:  
        LaunchTemplateName: 
@@ -119,7 +68,7 @@ Resources:
               Fn::ImportValue:                                                        
                 Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE-ARN"
                                                                                 
-          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'                 
+          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/dockerImageID}}'                 
           KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
           InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
           SecurityGroupIds:                                                          
@@ -135,20 +84,107 @@ Resources:
               yum update -y aws-cfn-bootstrap
               /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
               /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
-                                                     
+
+# template:
+#    Type: AWS::EC2::LaunchTemplate
+#    Description: "Public instance with cfn-init, install codedeploy agent and docker"                        
+#          
+#      # Wait for 5 minutes max          
+#    CreationPolicy: 
+#      ResourceSignal:
+#        Timeout: PT5M     
+#          
+#    Metadata:
+#     "AWS::CloudFormation::Init":
+#          configSets:
+#            setup:  
+#              - install_base_packages                     
+#              - install_code_deploy_agent
+#              - install_docker
+#              - install_cloudwatch_agent 
+#          install_base_packages:
+#            commands:
+#                "updates": 
+#                    "command": "yum update -y"
+#                "ruby_install": 
+#                    "command": "yum install -y ruby"
+#                       
+#          install_code_deploy_agent:
+#            files:
+#               "/home/ec2-user/install":
+#                 source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
+#                 mode: "000755"
+#                 owner: root
+#                 group: root
+#            commands: 
+#              "install_agent":
+#                 "command": "./install auto" 
+#                 "cwd": "/home/ec2-user" 
+##              "cfn-signal-back": 
+##                 "command": 
+##                    Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
+## 
+#          install_docker:
+#            packages:
+#              yum:
+#                docker: []
+#            commands: 
+#              "docker_perm": 
+#                "command": 
+#                  Fn::Sub: "usermod -aG docker ec2-user"
+##              "cfn-signal-back": 
+##                "command": 
+##                  Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}"
+#            services: 
+#              sysvinit: 
+#                docker: 
+#                  enabled: true 
+#                  ensureRunning: true 
+#          #
+#          install_cloudwatch_agent:
+#            commands:
+#             "updates": 
+#               "command": "yum install -y amazon-cloudwatch-agent"  
+#    Condition: createOnlyProdResources 
+#    Properties:  
+#       LaunchTemplateName: 
+#          !Sub '{{resolve:ssm:/${environment}/autoscale/template_name}}'  
+#       LaunchTemplateData: 
+#          IamInstanceProfile: 
+#            Arn: 
+#              Fn::ImportValue:                                                        
+#                Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE-ARN"
+#                                                                                
+#          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/dockerImageID}}'                 
+#          KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
+#          InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
+#          SecurityGroupIds:                                                          
+#            - Fn::ImportValue:                                                      
+#               Fn::Sub: "${permStackName}-PUBLIC-SG"                                
+#                               
+#                                                                                  
+#          UserData:                                                                  
+#            Fn::Base64:                                                              
+#             !Sub |                                                                 
+#              #!/bin/bash -x  
 #              yum update -y
-#              yum install -y ruby
-#              wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
-#              chmod a+x install 
-#              ./install auto 
-#              yum install docker -y 
-#              usermod -aG docker ec2-user 
-#              yum install -y amazon-cloudwatch-agent
-#              systemctl start docker 
-#              systemctl enable docker 
+#              yum update -y aws-cfn-bootstrap
+#              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
+#              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
+#                                                     
+##              yum update -y
+##              yum install -y ruby
+##              wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
+##              chmod a+x install 
+##              ./install auto 
+##              yum install docker -y 
+##              usermod -aG docker ec2-user 
+##              yum install -y amazon-cloudwatch-agent
+##              systemctl start docker 
+##              systemctl enable docker 
  # AutoScaling Group 
  #     
- scalingGroup:
+  scalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AutoScalingGroupName: myautogroup
