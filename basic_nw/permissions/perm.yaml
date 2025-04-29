@@ -356,7 +356,13 @@ Outputs:
     Export:
       "Name" :
         Fn::Sub: "${AWS::StackName}-EC2-INSTANCE-PROFILE"
-      
+  # 
+  Ec2InstanceProfileArn:
+    Value: !GetAtt ec2InstanceProfile.Arn
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-EC2-INSTANCE-PROFILE-ARN"
+              
   LambdaS3RoleArn:
     Value: !GetAtt lambdaS3Role.Arn 
     Export:
