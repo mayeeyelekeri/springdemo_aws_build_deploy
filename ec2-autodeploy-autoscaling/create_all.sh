@@ -10,9 +10,14 @@ sudo /home/vagrant/scripts/clock_reset.sh
 (cd ../basic_nw && ./create_all.sh) 
 
 # Delete EC2 instance which was started, we don't need that anymore here'
+cmd="aws ec2 describe-instances --query \"Reservations[0].Instances[0].InstanceId\" --output text" 
+instanceId=$(eval $cmd) 
 
-`aws ec2 terminate-instances --instance-ids i-1234567890abcdef0
+echo "terminating instance $instanceId" 
+cmd="aws ec2 terminate-instances --instance-ids $instanceId" 
+status=$(eval $cmd)  
 
+# now process all other stacks 
 dirs=(permissions2 lambda alb autoscale codedeploy codepipeline) 
 
 # Change into each directory and execute create stack script 

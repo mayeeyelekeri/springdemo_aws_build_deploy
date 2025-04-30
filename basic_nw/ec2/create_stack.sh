@@ -6,20 +6,28 @@ aws cloudformation wait stack-create-complete --stack-name ec2
 # create AMI from the running ec2 instance 
 instanceId=`aws ec2 describe-instances --query "Reservations[0].Instances[0].InstanceId" --output text`
 
-`aws ec2 create-image --instance-id $instanceId --name "myDockerImage" --description "Docker Image with CodeDeploy agent"`
+cmd="aws ec2 create-image --instance-id $instanceId --name \"myDockerImage\" --description \"Docker Image with CodeDeploy agent\""
+echo $cmd 
+status=$(eval $cmd)
 
 # Wait till the AMI is created, usually it takes few minutes, wait in a loop 
-status=`aws ec2 describe-images --owners self --query "Images[0].State" --output text`
+cmd="aws ec2 describe-images --owners self --query \"Images[0].State\" --output text"
+echo $cmd 
+status=$(eval $cmd)
 
 while [ "$status" != "available" ] 
 do 
    sleep 5 
-   status=`aws ec2 describe-images --owners self --query "Images[0].State" --output text`
+   cmd="aws ec2 describe-images --owners self --query \"Images[0].State\" --output text"
+   echo $cmd 
+   status=$(eval $cmd)
    echo "status is $status" 
 done 
 
 echo "AMI is successfully created" 
-imageId=`aws ec2 describe-images --owners self --query "Images[0].ImageId" --output text` 
+cmd="aws ec2 describe-images --owners self --query \"Images[0].ImageId\" --output text" 
+echo $cmd 
+imageId=$(eval $cmd)
 
 echo "AMI ID: $imageId" 
 
