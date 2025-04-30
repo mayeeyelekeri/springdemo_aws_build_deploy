@@ -237,10 +237,12 @@ Resources:
     Properties: 
       AutoScalingGroupName: !Ref scalingGroup
       LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
-      HeartbeatTimeout: '300'
+      HeartbeatTimeout: '60'
       DefaultResult: CONTINUE
-      NotificationMetadata: "nothing imp"
-      NotificationTargetARN: arn:aws:sns:us-east-1:637423231407:mysns
+      NotificationMetadata: "need to do something while deleting EC2"
+      NotificationTargetARN:  
+        Fn::ImportValue: 
+          Fn::Sub: "${utilsStackName}-SNS-TOPIC-ARN"
       RoleARN: 
         Fn::ImportValue: 
           Fn::Sub: "${perm2StackName}-AUTOSCALING-SNS-ROLE-ARN"     
@@ -255,9 +257,9 @@ Resources:
     Properties: 
       AutoScalingGroupName: !Ref scalingGroup
       LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
-      HeartbeatTimeout: '300'
+      HeartbeatTimeout: '60'
       DefaultResult: CONTINUE
-      NotificationMetadata: "nothing imp"
+      NotificationMetadata: "need to do something while creating EC2"
       NotificationTargetARN:  
          Fn::ImportValue: 
             Fn::Sub: "${utilsStackName}-SNS-TOPIC-ARN"
