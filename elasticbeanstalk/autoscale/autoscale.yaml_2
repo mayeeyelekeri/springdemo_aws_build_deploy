@@ -1,0 +1,132 @@
+Description: "Create Autoscaling"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+ template:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: 
+        !Sub '{{resolve:ssm:/${environment}/autoscale/template_name}}'  
+      LaunchTemplateData: 
+        IamInstanceProfile: 
+          Arn: !GetAtt
+            - myInstanceProfile
+            - Arn
+        SecurityGroupIds: 
+          - Fn::ImportValue: 
+             Fn::Sub: "${permStackName}-PUBLIC-SG"
+        InstanceType: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/instance_type}}'  
+        ImageId: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/ami_id}}'  
+        KeyName: 
+          !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'  
+        UserData:
+         Fn::Base64:
+          !Sub | 
+            #!/bin/bash
+            yum update -y 
+            yum install -y docker 
+            usermod -a -G docker ec2-user
+            systemctl start docker.service
+            yum install -y ruby 
+            wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install 
+            chmod a+x ./install 
+            ./install auto -v releases/codedeploy-agent-1.4.1-2244.noarch.rpm
+
+ scalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: myautogroup
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref template  
+        Version: !GetAtt template.LatestVersionNumber
+      VPCZoneIdentifier: 
+          - Fn::ImportValue: 
+             Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+          - Fn::ImportValue: 
+             Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
+      MinSize: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_min}}'  
+      MaxSize: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_max}}'  
+      DesiredCapacity: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_desired}}'  
+      TargetGroupARNs: 
+          - Fn::ImportValue: 
+             Fn::Sub: "${albStackName}-TARGET-GROUP"
+        
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", " auto"] ]
+         PropagateAtLaunch: true
+       - Key: Environment
+         Value: !Sub ${environment}	
+         PropagateAtLaunch: true
+
+ myInstanceProfile: 
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      Path: "/"
+      Roles: 
+        - 
+          Ref: myInstanceRole
+
+ myInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: s3accesspolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+
+Outputs:
+  LoadBalancer:
+    Value: !Ref template
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-TEMPLATE"
+  AutoscaleGroup:
+    Value: !Ref scalingGroup
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-AUTOSCALE-GROUP"
+
+

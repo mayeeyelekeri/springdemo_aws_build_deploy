@@ -1,0 +1,232 @@
+# File: beanstalk.yaml 
+# This module creates ElasticBeanStalk project and environment for running java application  
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
+# and "Secrets manager" values 
+#
+# Resource that would be created
+# 1) Application    
+# 2) Environment
+# 
+
+Description: "Create Beanstalk project for EC2"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Stack with basis permissions 
+    Type: String
+    Default: perm
+
+  
+  perm2StackName:
+    Description: Stack with extended permissions
+    Type: String
+    Default: perm2
+    
+  albStackName:
+    Description: ALB stack resources 
+    Type: String
+    Default: alb
+
+  codebuildStackName:
+    Description: CodeBuild resources 
+    Type: String
+    Default: codebuild
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+  # 
+  myElasticBeanStalkApplication: 
+    Type: AWS::ElasticBeanstalk::Application
+    Properties: 
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}' 
+      Description: "demo application using java"
+
+  # 
+  myBeanstalkVersion: 
+    Type: AWS::ElasticBeanstalk::ApplicationVersion
+    Properties: 
+      ApplicationName: !Ref myElasticBeanStalkApplication
+      SourceBundle: 
+        S3Bucket: 
+            Fn::ImportValue: 
+              Fn::Sub: "${codebuildStackName}-CODEBUILD-BUCKET"
+        S3Key: 
+            springdemo-0.0.1-SNAPSHOT.jar
+  # 
+  myBeanstalkEnvironment: 
+      Type: AWS::ElasticBeanstalk::Environment
+      Properties: 
+        ApplicationName: !Ref myElasticBeanStalkApplication
+        EnvironmentName: mydeploygroup 
+        TemplateName: !Ref myConfigTemplate
+        VersionLabel: !Ref myBeanstalkVersion
+#        ServiceRoleArn: 
+#          Fn::ImportValue: 
+#            Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
+#        AutoScalingGroups: 
+#          - Fn::ImportValue: 
+#               Fn::Sub: "${autoscaleStackName}-AUTOSCALE-GROUP"
+
+  myConfigTemplate: 
+    Type: AWS::ElasticBeanstalk::ConfigurationTemplate
+    Properties: 
+      ApplicationName: !Ref myElasticBeanStalkApplication
+      Description: some template 
+      SolutionStackName: spring
+      OptionSettings: 
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: EnvironmentType
+        Value: LoadBalanced
+
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: LoadBalancerType
+        Value: application
+
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: ServiceRole
+        Value:  
+          Fn::ImportValue: 
+            Fn::Sub: "${perm2StackName}-ELASTICBEANSTALK-SERVICE-ROLE-ARN"
+
+        # AUTOSCALING OPTIONS
+      - Namespace: aws:autoscaling:asg
+        OptionName: MinSize
+        Value: 1
+
+      - Namespace: aws:autoscaling:asg
+        OptionName: MaxSize
+        Value: 1
+
+      - Namespace: aws:autoscaling:launchtemplate
+        OptionName: SecurityGroups
+        Value:
+            Fn::ImportValue: 
+              Fn::Sub: "${permStackName}-PUBLIC-SG"
+
+      - Namespace: aws:autoscaling:launchtemplate
+        OptionName: InstanceType
+        Value: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+
+      - Namespace: aws:autoscaling:launchtemplate
+        OptionName: IamInstanceProfile
+        Value: 
+            Fn::ImportValue: 
+              Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE"
+
+      - Namespace: aws:autoscaling:launchtemplate
+        OptionName: EC2KeyName
+        Value: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'  
+
+      - Namespace: aws:autoscaling:updatepolicy:rollingupdate
+        OptionName: RollingUpdateEnabled
+        Value: true
+
+      - Namespace: aws:autoscaling:updatepolicy:rollingupdate
+        OptionName: RollingUpdateType
+        Value: Health
+
+      - Namespace: aws:autoscaling:trigger
+        OptionName: MeasureName
+        Value: CPUUtilization
+
+      - Namespace: aws:autoscaling:trigger
+        OptionName: Unit
+        Value: Percent
+
+      - Namespace: aws:autoscaling:trigger
+        OptionName: UpperThreshold
+        Value: 80
+
+      - Namespace: aws:autoscaling:trigger
+        OptionName: LowerThreshold
+        Value: 40
+
+        # VPC OPTIONS (PLACEMENT OF RESOURCES IN SUBNETS)
+      - Namespace: aws:ec2:vpc
+        OptionName: VPCId
+        Value:
+          Fn::ImportValue: !Sub "${networkStackName}-VPCID"
+
+      - Namespace: aws:ec2:vpc
+        OptionName: Subnets
+        Value:
+          "Fn::Join":
+          - ','
+          - - !ImportValue
+                "Fn::Sub": "${networkStackName}-PRIVATE-SUBNET1"
+            - !ImportValue
+                "Fn::Sub": "${networkStackName}-PRIVATE-SUBNET2"
+
+      - Namespace: aws:ec2:vpc
+        OptionName: ELBSubnets
+        Value:
+          "Fn::Join":
+          - ','
+          - - !ImportValue
+                "Fn::Sub": "${networkStackName}-PUBLIC-SUBNET1"
+            - !ImportValue
+                "Fn::Sub": "${networkStackName}-PUBLIC-SUBNET2"
+
+      - Namespace: aws:elbv2:loadbalancer
+        OptionName: SecurityGroups
+        Value:
+          Fn::ImportValue: !Sub "${permStackName}-PUBLIC-SG"
+
+      - Namespace: aws:elbv2:loadbalancer
+        OptionName: ManagedSecurityGroup
+        Value:
+           Fn::ImportValue: !Sub "${permStackName}-PUBLIC-SG"
+
+      - Namespace: aws:elbv2:listenerrule:default
+        OptionName: PathPatterns
+        Value: "/*"
+
+#      - Namespace: !Sub
+#        - "aws:elbv2:listener:${ListenPort}"
+#        - ListenPort: 80
+#            
+#        OptionName: Protocol
+#        Value: !If [ TlsEnabled, HTTPS, HTTP ]
+#
+#      - Namespace: !Sub
+#        - "aws:elbv2:listener:${ListenPort}"
+#        - ListenPort:
+#            "Fn::ImportValue": !Sub "${NetworkStackName}-ELBIngressPort"
+#        OptionName: Rules
+#        Value: default
+#
+#      - Namespace: !Sub
+#        - "aws:elbv2:listener:${ListenPort}"
+#        - ListenPort:
+#            "Fn::ImportValue": !Sub "${NetworkStackName}-ELBIngressPort"
+#        OptionName: SSLCertificateArns
+#        Value: !Ref SSLCertificateArn
+
+        # CLOUDWATCH LOGS
+      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+        OptionName: StreamLogs
+        Value: true
+
+      - Namespace: aws:elasticbeanstalk:cloudwatch:logs
+        OptionName: DeleteOnTerminate
+        Value: true
+
+        
+Outputs:
+  BeanStalkApp:
+    Value: !Ref myElasticBeanStalkApplication
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-BEANSTALK-PROJECT-ARN"

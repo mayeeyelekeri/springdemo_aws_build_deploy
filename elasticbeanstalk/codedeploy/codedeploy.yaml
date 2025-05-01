@@ -1,0 +1,117 @@
+# File: codedeploy.yaml 
+# This module creates codedeploy project and roles 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
+# and "Secrets manager" values 
+#
+# Resource that would be created
+# 1) CodeDeploy project  
+# 2) CodeDeploy Deployment group 
+# 
+# Reference: https://tech.metalab.com/ecs-blue-green-deployment-pipelines-with-codepipeline-codedeploy-9b7039084d57
+# https://amlanscloud.com/bluegreenpost/
+
+Description: "Create CodeDeploy project and deployment group"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  perm2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm2
+  
+  ec2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: ec2
+          
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  autoscaleStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: autoscale
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+  # Create CodeDeploy Application for EC2 deploy     
+  # Inputs: 
+  #  From Parameter store
+  #  1) codedeploy application name  
+  # 
+  codeDeployEC2Project: 
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+      ComputePlatform: Server
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "ec2"] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+         
+  # Create CodeDeploy Deployment group ]    
+  # Inputs: 
+  # 1) codedeploy application reference
+  # 2) codedeploy service role reference (from Permissions Stack)
+  # 3) EC2 tag name 
+  # 
+  codeDeployEC2DeploymentGroup: 
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      DeploymentGroupName: EC2CodeDeploymentGroup 
+      ApplicationName: !Ref codeDeployEC2Project
+      ServiceRoleArn: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      
+      AutoScalingGroups:
+        - Fn::ImportValue: 
+           Fn::Sub: "${autoscaleStackName}-AUTOSCALE-GROUP"
+           
+      AutoRollbackConfiguration:
+         Enabled: true
+         Events:
+         - DEPLOYMENT_FAILURE
+         - DEPLOYMENT_STOP_ON_REQUEST
+      
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+         
+Outputs:
+  CodeDeployGroupEC2Group:
+    Value: !Ref codeDeployEC2DeploymentGroup
+    Export:
+        "Name" :
+          Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-GROUP"
+          
+  CodeDeployEC2Project:
+    Value: !Ref codeDeployEC2Project
+    Export:
+        "Name" :
+          Fn::Sub: "${AWS::StackName}-CODEDEPLOY-EC2-PROJECT"
+          
+        

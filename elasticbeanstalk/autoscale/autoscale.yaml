@@ -1,0 +1,282 @@
+Description: "Create Autoscaling"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  perm2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm2
+
+  ec2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: ec2
+          
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  autoscaleStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: autoscale
+
+  utilsStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: utils 
+    
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod  
+
+Conditions: 
+    createOnlyProdResources: 
+      !Equals [ !Ref environment, "dev" ]
+            
+Resources:
+# ec2WaitCondition: 
+#    Type: AWS::CloudFormation::WaitCondition
+#    CreationPolicy: 
+#      ResourceSignal:
+#        Timeout: PT10M
+
+  template:
+    Type: AWS::EC2::LaunchTemplate
+    Description: "My Template with codedeploy agent and docker"                        
+          
+      # Wait for 5 minutes max          
+    CreationPolicy: 
+      ResourceSignal:
+        Timeout: PT5M     
+    
+    Condition: createOnlyProdResources 
+    Properties:  
+       LaunchTemplateName: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/template_name}}'  
+       LaunchTemplateData: 
+          IamInstanceProfile: 
+            Arn: 
+              Fn::ImportValue:                                                        
+                Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE-ARN"
+                                                                                
+          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/my_docker_image_id}}'                 
+          KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
+          InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
+          SecurityGroupIds:                                                          
+            - Fn::ImportValue:                                                      
+               Fn::Sub: "${permStackName}-PUBLIC-SG"                                
+                               
+                                                                                  
+          UserData:                                                                  
+            Fn::Base64:                                                              
+             !Sub |                                                                 
+              #!/bin/bash -x  
+              yum update -y
+              yum update -y aws-cfn-bootstrap
+              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
+              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
+
+# template:
+#    Type: AWS::EC2::LaunchTemplate
+#    Description: "Public instance with cfn-init, install codedeploy agent and docker"                        
+#          
+#      # Wait for 5 minutes max          
+#    CreationPolicy: 
+#      ResourceSignal:
+#        Timeout: PT5M     
+#          
+#    Metadata:
+#     "AWS::CloudFormation::Init":
+#          configSets:
+#            setup:  
+#              - install_base_packages                     
+#              - install_code_deploy_agent
+#              - install_docker
+#              - install_cloudwatch_agent 
+#          install_base_packages:
+#            commands:
+#                "updates": 
+#                    "command": "yum update -y"
+#                "ruby_install": 
+#                    "command": "yum install -y ruby"
+#                       
+#          install_code_deploy_agent:
+#            files:
+#               "/home/ec2-user/install":
+#                 source: "https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install"
+#                 mode: "000755"
+#                 owner: root
+#                 group: root
+#            commands: 
+#              "install_agent":
+#                 "command": "./install auto" 
+#                 "cwd": "/home/ec2-user" 
+##              "cfn-signal-back": 
+##                 "command": 
+##                    Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstances --region ${AWS::Region}"
+## 
+#          install_docker:
+#            packages:
+#              yum:
+#                docker: []
+#            commands: 
+#              "docker_perm": 
+#                "command": 
+#                  Fn::Sub: "usermod -aG docker ec2-user"
+##              "cfn-signal-back": 
+##                "command": 
+##                  Fn::Sub: "/opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource publicInstanceWithCInit --region ${AWS::Region}"
+#            services: 
+#              sysvinit: 
+#                docker: 
+#                  enabled: true 
+#                  ensureRunning: true 
+#          #
+#          install_cloudwatch_agent:
+#            commands:
+#             "updates": 
+#               "command": "yum install -y amazon-cloudwatch-agent"  
+#    Condition: createOnlyProdResources 
+#    Properties:  
+#       LaunchTemplateName: 
+#          !Sub '{{resolve:ssm:/${environment}/autoscale/template_name}}'  
+#       LaunchTemplateData: 
+#          IamInstanceProfile: 
+#            Arn: 
+#              Fn::ImportValue:                                                        
+#                Fn::Sub: "${permStackName}-EC2-INSTANCE-PROFILE-ARN"
+#                                                                                
+#          ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/dockerImageID}}'                 
+#          KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'                
+#          InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'     
+#          SecurityGroupIds:                                                          
+#            - Fn::ImportValue:                                                      
+#               Fn::Sub: "${permStackName}-PUBLIC-SG"                                
+#                               
+#                                                                                  
+#          UserData:                                                                  
+#            Fn::Base64:                                                              
+#             !Sub |                                                                 
+#              #!/bin/bash -x  
+#              yum update -y
+#              yum update -y aws-cfn-bootstrap
+#              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
+#              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
+#                                                     
+##              yum update -y
+##              yum install -y ruby
+##              wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
+##              chmod a+x install 
+##              ./install auto 
+##              yum install docker -y 
+##              usermod -aG docker ec2-user 
+##              yum install -y amazon-cloudwatch-agent
+##              systemctl start docker 
+##              systemctl enable docker 
+ # AutoScaling Group 
+ #     
+  scalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: myautogroup
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref template  
+        Version: !GetAtt template.LatestVersionNumber
+      VPCZoneIdentifier: 
+          - Fn::ImportValue: 
+             Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+          - Fn::ImportValue: 
+             Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
+      MinSize: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_min}}'  
+      MaxSize: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_max}}'  
+      DesiredCapacity: 
+          !Sub '{{resolve:ssm:/${environment}/autoscale/autoscale_desired}}'  
+      TargetGroupARNs: 
+          - Fn::ImportValue: 
+             Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE"
+      
+        
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", " auto"] ]
+         PropagateAtLaunch: true
+       - Key: Environment
+         Value: !Sub ${environment}	
+         PropagateAtLaunch: true
+
+  # Warmpool could be created for additional servers.. to use this, change value to 1 
+  myWarmPool: 
+      Type: AWS::AutoScaling::WarmPool
+      Properties:
+        AutoScalingGroupName: !Ref scalingGroup
+        MinSize: '0'
+        PoolState: Stopped
+ 
+  # Take some action when EC2 is getting terminated "Terminating:Wait" state
+  # 5 minutes to take some action 
+  # Send a notification to SNS topic 
+  # 
+  myTerminationLifecycleHook: 
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties: 
+      AutoScalingGroupName: !Ref scalingGroup
+      LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+      HeartbeatTimeout: '60'
+      DefaultResult: CONTINUE
+      NotificationMetadata: "need to do something while deleting EC2"
+      NotificationTargetARN:  
+        Fn::ImportValue: 
+          Fn::Sub: "${utilsStackName}-SNS-TOPIC-ARN"
+      RoleARN: 
+        Fn::ImportValue: 
+          Fn::Sub: "${perm2StackName}-AUTOSCALING-SNS-ROLE-ARN"     
+     
+  #
+  # Take some action when EC2 is getting creating "Pending:wait" state 
+  # 5 minutes to take some action 
+  # Send a notification to SNS topic 
+  # 
+  myCreationLifecycleHook: 
+    Type: AWS::AutoScaling::LifecycleHook
+    Properties: 
+      AutoScalingGroupName: !Ref scalingGroup
+      LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
+      HeartbeatTimeout: '60'
+      DefaultResult: CONTINUE
+      NotificationMetadata: "need to do something while creating EC2"
+      NotificationTargetARN:  
+         Fn::ImportValue: 
+            Fn::Sub: "${utilsStackName}-SNS-TOPIC-ARN"
+      RoleARN: 
+        Fn::ImportValue: 
+          Fn::Sub: "${perm2StackName}-AUTOSCALING-SNS-ROLE-ARN"   
+      
+Outputs:
+  LoadBalancer:
+    Value: !Ref template
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-TEMPLATE"
+  AutoscaleGroup:
+    Value: !Ref scalingGroup
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-AUTOSCALE-GROUP"
+
+
