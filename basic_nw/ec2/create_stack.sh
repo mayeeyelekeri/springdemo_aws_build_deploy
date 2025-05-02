@@ -40,7 +40,7 @@ status=$(eval $cmd)
 
 while [ "$status" != "available" ] 
 do 
-   sleep 5 
+   sleep 10 
    cmd="aws ec2 describe-images --owners self --query \"Images[0].State\" --output text"
    echo $cmd 
    status=$(eval $cmd)
