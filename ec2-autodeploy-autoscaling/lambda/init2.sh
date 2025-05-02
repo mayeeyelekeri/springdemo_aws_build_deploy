@@ -14,6 +14,12 @@ do
   cmd="aws s3 cp lambdacode/zip/${arr[$i]}.zip s3://$codebuild_bucket_name" 
   echo $cmd
   eval $cmd
+  if [[ $? -ne 0 ]]
+    then
+       echo ".... some issue with uploading Lambda code, exiting "
+       exit -1
+  fi
+ 
 done 
 
  
