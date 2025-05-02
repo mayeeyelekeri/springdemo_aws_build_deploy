@@ -25,6 +25,14 @@ for i in "${dirs[@]}"
 do 
    echo Creating $i stack .... 
    (cd $i && ./create_stack.sh)
+
+   # if issue from a stack, don't proceed
+   if [[ $? -ne 0 ]]
+   then
+     echo "stack $i has errors, quitting"
+     exit -1
+   fi
+
    echo .. done creating $i stack!!! 
 done 
 
