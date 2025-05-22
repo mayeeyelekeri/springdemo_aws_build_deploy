@@ -70,9 +70,9 @@ Resources:
       Type: AWS::EC2::Instance
       
       # Wait for 5 minutes max          
-      CreationPolicy: 
-        ResourceSignal:
-          Timeout: PT5M     
+      #CreationPolicy: 
+      #  ResourceSignal:
+      #    Timeout: PT10M     
           
       Metadata:
         "AWS::CloudFormation::Init":
