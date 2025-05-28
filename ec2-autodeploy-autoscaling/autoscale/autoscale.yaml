@@ -59,9 +59,9 @@ Resources:
     Description: "My Template with codedeploy agent and docker"                        
           
       # Wait for 5 minutes max          
-    CreationPolicy: 
-      ResourceSignal:
-        Timeout: PT5M     
+    #CreationPolicy: 
+    #  ResourceSignal:
+    #    Timeout: PT5M     
     
     Condition: createOnlyProdResources 
     Properties:  
@@ -81,14 +81,14 @@ Resources:
                Fn::Sub: "${permStackName}-PUBLIC-SG"                                
                                
                                                                                   
-          UserData:                                                                  
-            Fn::Base64:                                                              
-             !Sub |                                                                 
-              #!/bin/bash -x  
-              yum update -y
-              yum update -y aws-cfn-bootstrap
-              /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
-              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
+          #UserData:                                                                  
+          #  Fn::Base64:                                                              
+          #   !Sub |                                                                 
+          #    #!/bin/bash -x  
+          #    yum update -y
+          #    yum update -y aws-cfn-bootstrap
+          #    /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource template --configsets setup --region ${AWS::Region}
+          #    /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource template --region ${AWS::Region}
 
 # template:
 #    Type: AWS::EC2::LaunchTemplate
