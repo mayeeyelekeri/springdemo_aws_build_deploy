@@ -159,6 +159,15 @@ Resources:
                   - logs:PutLogEvents
                   - logs:DescribeLogStreams
                 Resource: '*'
+        - PolicyName: "SSMAccess"
+          PolicyDocument:
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - ssmmessages:*
+                  - ssm:* 
+                Resource: "*"
+             
   # Create EC2 Instance profile with the role above for S3 access 
   ec2InstanceProfile:
     Description: "EC2 Instance profile with S3 access" 
