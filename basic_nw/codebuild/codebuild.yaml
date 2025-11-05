@@ -71,10 +71,10 @@ Resources:
   myCreds:
     Type: AWS::CodeBuild::SourceCredential
     Properties:
-        AuthType: '{{resolve:secretsmanager:mycreds:SecretString:auth_type}}'
-        ServerType: '{{resolve:secretsmanager:mycreds:SecretString:server_type}}'
-        Token: '{{resolve:secretsmanager:mycreds:SecretString:token}}'
-        Username: '{{resolve:secretsmanager:mycreds:SecretString:username}}'
+        AuthType: '{{resolve:secretsmanager:my_creds:SecretString:auth_type}}'
+        ServerType: '{{resolve:secretsmanager:my_creds:SecretString:server_type}}'
+        Token: '{{resolve:secretsmanager:my_creds:SecretString:token}}'
+        Username: '{{resolve:secretsmanager:my_creds:SecretString:username}}'
   
    # Create CodeBuild Project to perform maven build 
    # Also enable cloudwatch logs 
