@@ -68,7 +68,7 @@ Resources:
   # 
   # Get Git Credentials from secrets manager 
   # 
-  creds:
+  myCreds:
     Type: AWS::CodeBuild::SourceCredential
     Properties:
         AuthType: '{{resolve:secretsmanager:mycreds:SecretString:auth_type}}'
@@ -106,7 +106,7 @@ Resources:
        GitCloneDepth: 1
        BuildSpec: !Sub '{{resolve:ssm:/${environment}/codebuild/buildspec_file_name_ec2}}'
        Auth:
-          Resource: !Ref gitCreds1
+          Resource: !Ref myCreds
           Type: OAUTH
 
      Artifacts: 
@@ -160,7 +160,7 @@ Resources:
        GitCloneDepth: 1
        BuildSpec: !Sub '{{resolve:ssm:/${environment}/codebuild/buildspec_file_name_ecs}}'
        Auth:
-          Resource: !Ref gitCreds1
+          Resource: !Ref myCreds
           Type: OAUTH
 
      Artifacts: 
@@ -220,10 +220,10 @@ Outputs:
       "Name" :
         !Sub "${AWS::StackName}-CODEBUILD-PROJECT-ECS"
         
-  GitCreds:
-    Value: !Ref gitCreds1
+  MyCreds:
+    Value: !Ref myCreds
     Export:
       "Name" :
-        !Sub "${AWS::StackName}-GIT-CREDS"
+        !Sub "${AWS::StackName}-MYCREDS"
 
 
