@@ -121,13 +121,13 @@ Resources:
               OutputArtifacts:
                 - Name: sourceCodeBundle
               Configuration:
-                Owner: '{{resolve:secretsmanager:git_creds1:SecretString:username}}'
+                Owner: '{{resolve:secretsmanager:git_creds:SecretString:username}}'
                 
                 # Make sure just to specify only the reponame, not the fullpath 
                 Repo: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo_short_name}}'
                 
                 Branch: main
-                OAuthToken: '{{resolve:secretsmanager:git_creds1:SecretString:token}}'
+                OAuthToken: '{{resolve:secretsmanager:git_creds:SecretString:token}}'
               RunOrder: 1
               
         # Specify existing "codebuild" project 

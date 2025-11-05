@@ -26,8 +26,8 @@ aws cloudformation wait stack-create-complete --stack-name ec2
        exit -1
  fi
 
-# create AMI from the running ec2 instance 
-instanceId=`aws ec2 describe-instances --query "Reservations[0].Instances[0].InstanceId" --output text`
+# create AMI from the running ec2 instance, pick up only instances which are in running/pending 
+instanceId=`aws ec2 describe-instances --query "Reservations[0].Instances[0].InstanceId" --filter "Name=instance-state-name,Values=running,pending" --output text`
 
 cmd="aws ec2 create-image --instance-id $instanceId --name \"myDockerImage\" --description \"Docker Image with CodeDeploy agent\""
 echo $cmd 
