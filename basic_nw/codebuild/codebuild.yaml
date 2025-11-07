@@ -71,10 +71,10 @@ Resources:
   myCreds:
     Type: AWS::CodeBuild::SourceCredential
     Properties:
-        AuthType: '{{resolve:secretsmanager:my_creds:SecretString:auth_type}}'
-        ServerType: '{{resolve:secretsmanager:my_creds:SecretString:server_type}}'
-        Token: '{{resolve:secretsmanager:my_creds:SecretString:token}}'
-        Username: '{{resolve:secretsmanager:my_creds:SecretString:username}}'
+        AuthType: '{{resolve:ssm:/secrets/git/auth_type}}'
+        ServerType: '{{resolve:ssm:/secrets/git/server_type}}'
+        Token: '{{resolve:ssm:/secrets/git/token}}'
+        Username: '{{resolve:ssm:/secrets/git/username}}'
   
    # Create CodeBuild Project to perform maven build 
    # Also enable cloudwatch logs 
