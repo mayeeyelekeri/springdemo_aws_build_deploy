@@ -2,7 +2,6 @@
 # This module creates codepipeline project and roles 
 #
 # Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
-# and "Secrets manager" values 
 #
 # Resource that would be created
 # 1) CodePipeline S3 bucket for storing artifacts   
@@ -121,13 +120,13 @@ Resources:
               OutputArtifacts:
                 - Name: sourceoutput
               Configuration:
-                Owner: '{{resolve:secretsmanager:git_creds:SecretString:username}}'
+                Owner: '{{resolve:ssm:/secrets/git/username}}'
                 
                 # Make sure just to specify only the reponame, not the fullpath 
                 Repo: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo_short_name}}'
                 
                 Branch: main
-                OAuthToken: '{{resolve:secretsmanager:git_creds:SecretString:token}}'
+                OAuthToken: '{{resolve:ssm:/secrets/git/token}}'
               RunOrder: 1
         - Name: BuildStage
           Actions:

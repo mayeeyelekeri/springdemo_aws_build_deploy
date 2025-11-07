@@ -1,8 +1,7 @@
 # File: codepipeline.yaml 
 # This module creates codepipeline project and roles 
 #
-# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
-# and "Secrets manager" values 
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
 #
 # Resource that would be created
 # 1) CodePipeline S3 bucket for storing artifacts   
@@ -86,8 +85,8 @@ Resources:
   #  1) Code Pipeline Role arn  
   #  2) GitHub specific 
   #  2.a) GitHub repo name (last part only, from parameter store)
-  #  2.b) GitHub user name (from Secrets manager)
-  #  2.c) GitHub OAuth token (from Secrets manager)
+  #  2.b) GitHub user name (from Parameter store)
+  #  2.c) GitHub OAuth token (from Parameter store)
   #  2.d) Artifact Storage location (need this info in CodeDeploy)
   # 
   #  3) CodeBuild specific 
@@ -121,13 +120,13 @@ Resources:
               OutputArtifacts:
                 - Name: sourceoutput
               Configuration:
-                Owner: '{{resolve:secretsmanager:my_creds:SecretString:username}}'
+                Owner: '{{resolve:ssm:/secrets/git/username}}'
                 
                 # Make sure just to specify only the reponame, not the fullpath 
                 Repo: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo_short_name}}'
                 
                 Branch: main
-                OAuthToken: '{{resolve:secretsmanager:my_creds:SecretString:token}}'
+                OAuthToken: '{{resolve:ssm:/secrets/git/token}}'
               RunOrder: 1
         - Name: BuildStage
           Actions:
