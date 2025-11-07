@@ -71,12 +71,13 @@ Resources:
        - Key: Environment
          Value: !Sub ${environment}
 
-  # Create an ECS Task Definition, basically memory configution, cpu config etc   
+  # Create an ECS Task Definition, basically memory configuration, cpu config etc   
   # Inputs: 
   #  From Parameter store
-  #  1) Task Name 
+  #  1) Task definition Name 
   #  2) Docker Image location (repository path)  
-  #  3) ECS Role, which is a reference 
+  #  3) ECS Role, which is a reference
+  #  4) Env Variable information  
   # 
   #  Other things to consider: 
   #   1) Make sure to select FARGATE 
@@ -104,7 +105,7 @@ Resources:
              Protocol: tcp 
          Environment: 
             - Name: WELCOME_MESSAGE
-              Value: "this message is from the stack2"
+              Value: !Sub '{{resolve:ssm:/secrets/git/token}}'
             - Name: IP_ADDRESS
               Value: "10.0.0.0"
 

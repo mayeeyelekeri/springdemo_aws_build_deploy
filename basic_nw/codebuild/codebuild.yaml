@@ -1,15 +1,15 @@
 # File: codebuild.yaml 
 # This module create all the codebuild project and roles 
 #
-# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
-# and "Secrets manager" values 
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values
 #
 # Resource that would be created
-# 1) ECS Cluster 
-# 2) ECS Task Definition  
-# 3) ECS Service 
-# 4) ECS Role 
-# 
+# 1) Codebuild bucket 
+# 2) Codebuild project   
+# 3) Codebuild project for ECS  
+# 4) Github creds 
+# 5) CustoBucketCleanup resource 
+# 6) Store the new bucket name in "parameter store" with name "/dev/codebuild/bucket_name"
 
 Description: "Create CodeBuild Projects"
 
@@ -183,7 +183,7 @@ Resources:
           GroupName: "build-logs"
           StreamName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
 
-  # Custome resource to empty S3 CodeBuild bucket 
+  # Custom resource to empty S3 CodeBuild bucket 
   # Inputs:
   # 1) CodeBuild Bucket reference 
   # 2) S3-Lambda Funcation Role ARN (created in Perm stack) 
