@@ -129,11 +129,7 @@ Resources:
      Environment: # use Ubuntu standard v7
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        # Image: "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
-        Image: "aws/codebuild/amazonlinux-x86_64-lambda-standard:corretto17"
-        # Get java build images from here:
-        #  aws codebuild list-curated-environment-images
-        # Amazon Linux 2 x86_64 standard:4.0
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
 
      LogsConfig:
         CloudWatchLogs:
