@@ -83,6 +83,7 @@ Resources:
         Token: '{{resolve:ssm:/secrets/git/token}}'
         Username: '{{resolve:ssm:/secrets/git/username}}'
   
+
    # Create CodeBuild Project to perform maven build 
    # Also enable cloudwatch logs 
    #   
@@ -194,63 +195,7 @@ Resources:
           GroupName: "build-logs"
           StreamName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
 
-#
- # Create CodeBuild Project2 to perform maven build 
- # For ECS option where docker image is built and pushed to ECR
- # Also enable cloudwatch logs 
- #   
- # Inputs: 
- 
- #  1) CodeBuild bucket name 
- #  2) Git Credentials  
- #  3) CodeBuild Service Role 
- #  
- #  Build environment Information like: 
- #  4) Build Image (its an aws docker image)
- #  5) Compute Type (small)
- #  6) Image Type (linux container)
- #  
- #  From Parameter store
- #  7) codebuild project name
- #  8) Source code Git Repository   
- #     
-codebuildProjectForECS:
-  Type: AWS::CodeBuild::Project
-  Properties:
-   Name: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name_ecs}}' 
-   Description: some build info 
-
-   Source: 
-     Type: GITHUB
-     Location: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo}}'
-     GitCloneDepth: 1
-     BuildSpec: !Sub '{{resolve:ssm:/${environment}/codebuild/buildspec_file_name_ecs}}'
-     Auth:
-        Resource: !Ref myCreds
-        Type: OAUTH
-
-   Artifacts: 
-      Type: S3
-      Location: !Sub arn:aws:s3:::${codebuildBucket}
-      EncryptionDisabled: True
-
-   ServiceRole:   
-      Fn::ImportValue: 
-        Fn::Sub: "${permStackName}-CODEBUILD-SERVICE-ROLE-ARN"
-
-   Environment: # use Ubuntu standard v7
-      Type: LINUX_CONTAINER
-      ComputeType: BUILD_GENERAL1_SMALL
-      Image: "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
-
-   LogsConfig:
-      CloudWatchLogs:
-        Status: ENABLED
-        GroupName: "build-logs"
-        StreamName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
-        
-   # Create CodeBuild Tradechamp to perform maven build 
-   # For ECS option where docker image is built and pushed to ECR
+   # Create CodeBuild Project to perform maven build 
    # Also enable cloudwatch logs 
    #   
    # Inputs: 
@@ -260,7 +205,7 @@ codebuildProjectForECS:
    #  3) CodeBuild Service Role 
    #  
    #  Build environment Information like: 
-   #  4) Build Image (its a aws docker image)
+   #  4) Build Image (its an aws docker image)
    #  5) Compute Type (small)
    #  6) Image Type (linux container)
    #  
@@ -295,7 +240,7 @@ codebuildProjectForECS:
      Environment: # use Ubuntu standard v7
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+        Image: "aws/codebuild/amazonlinux-x86_64-standard:5.0" 
 
      LogsConfig:
         CloudWatchLogs:
@@ -328,6 +273,7 @@ Outputs:
       "Name" :
         Fn::Sub: "${AWS::StackName}-CODEBUILD-BUCKET"
 
+
   ProjectName:
     Value: !Ref codebuildProject
     Export:
@@ -339,7 +285,7 @@ Outputs:
     Export:
       "Name" :
         !Sub "${AWS::StackName}-CODEBUILD-PROJECT-ECS"
- 
+
   ProjectNameTradechamp:
     Value: !Ref codebuildProjectForTradeChamp
     Export:
