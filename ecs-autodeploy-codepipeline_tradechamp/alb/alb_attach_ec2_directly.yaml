@@ -1,0 +1,117 @@
+# File: alb.yaml 
+# This module creates all the "Load Balancer" related resources 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
+# Also make sure the "network" and "permissions" modules are already created 
+# 
+# Resource that would be created
+# 1) Listener on port 80 
+# 2) Target Group based on the application port (mostly 80)  
+# 3) Application Load Balancer 
+
+Description: "Create Application Load Balancer"
+
+#  "network" and "permission" modules should have been created already 
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  ec2StackName:
+    Description: Name of the EC2 stack with all ec2 resources
+    Type: String
+    Default: ec2
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+  albName:
+    Description: springdemo
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: springdemo
+    
+Resources:
+  
+ # Create a target group for application port and register both the EC2 instances  
+  targetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: my-target-group
+      Protocol: HTTP
+      Port: !Sub '{{resolve:ssm:/${environment}/alb/application_port}}'
+      VpcId: 
+        Fn::ImportValue: 
+         Fn::Sub: "${networkStackName}-VPCID"
+      Targets: 
+        - Id: 
+            Fn::ImportValue: 
+                Fn::Sub: "${ec2StackName}-PUBLIC-INSTANCE1"
+        - Id: 
+            Fn::ImportValue: 
+                Fn::Sub: "${ec2StackName}-PUBLIC-INSTANCE2"
+          Port: 80
+      Tags:
+        - Key: Name
+          Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroup"]]
+        - Key: Environment
+          Value: !Sub ${environment}
+
+  # Create application load balancer and attach the target group 
+  alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${albName}
+      SecurityGroups: 
+        - Fn::ImportValue: 
+           Fn::Sub: "${permStackName}-PUBLIC-SG"
+      Subnets: 
+        - Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+        - Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "alb"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+
+  # Create a listener on port "80"
+  listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref alb
+      Port: 80
+      Protocol: HTTP
+      DefaultActions: 
+      - Type: "forward" 
+        TargetGroupArn: !Ref targetGroup
+
+# Export the following 2 values 
+# 1) alb : alb-ALB 
+# 2) target group - alb-TARGET_GROUP
+#
+Outputs:
+  LoadBalancer:
+    Value: !Ref alb
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-ALB"
+  TargetGroup:
+    Value: !Ref targetGroup
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-TARGET-GROUP"
+
+

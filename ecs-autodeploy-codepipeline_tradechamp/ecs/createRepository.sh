@@ -1,0 +1,36 @@
+#!/bin/bash 
+
+echo "inside create repo script" 
+repository_name="tradechamp"
+region="us-east-1"
+
+## Create the repository 
+aws ecr create-repository --repository-name $repository_name
+ 
+# -- Get specific values of the repository and remove quotes (double quotes are there in the beginning and end) 
+uri=`aws ecr  describe-repositories --repository-name $repository_name --query repositories[0].repositoryUri`
+uri=`echo $uri | tr -d '"'`
+
+arn=`aws ecr  describe-repositories --repository-name $repository_name --query repositories[0].repositoryArn`
+arn=`echo $arn | tr -d '"'`
+
+aws_account_id=`aws ecr  describe-repositories --repository-name $repository_name --query repositories[0].registryId` 
+aws_account_id=`echo $aws_account_id | tr -d '"'`
+
+echo "URI: $uri"
+echo "ARN: $arn" 
+echo "AWS Account ID: $aws_account_id"
+
+## Add a new parameter with the repository Path
+aws ssm put-parameter \
+            --name "/dev/ecs/$repository_name/ecr_repository" \
+            --type "String" \
+            --value "$uri" \
+            --overwrite
+
+## Add a new parameter with the repository arn
+aws ssm put-parameter \
+            --name "/dev/ecs/$repository_name/ecr_repository_arn" \
+            --type "String" \
+            --value "$arn" \
+            --overwrite

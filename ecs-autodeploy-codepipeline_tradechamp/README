@@ -1,0 +1,49 @@
+This project simulates the CodePipeline deployment for EC2 
+
+ALB Related
+------------
+- 2 target group(blue and green) 
+
+- Blue target group point to port 80 
+
+- Green target group pointing to 8080
+
+- EC2 is added to Blue TG 
+
+- 2 ALB Listeners (blue and green) for port 80 and 8080 
+
+
+ECS Related
+--------------
+- CodeBuild project to perform build and push image to ECR 
+
+- CodeDeploy project to perform deployment to ECS (need to pass appspec.yaml manually)
+
+- CodeDeploy project is setup to perform Blue-Green deployment 
+
+- ECS which brings up the cluster and service 
+
+- ECS Service is attached to ALB and linked to CodeDeploy 
+
+
+CodePipeline Related
+--------------------- 
+
+- As soon as there is a code change, pipeline is triggered 
+
+- Code is built using CodeBuild and artifact is uploaded to S3  
+
+- CodeDeploy perform the EC2 deployment 
+
+CodeDeploy ECS Related
+-----------------------
+- Blue/Green Deployment configuration 
+
+- ALB is linked for Prod Traffic points to Blue Listener and Test Traffic points to Green Listener 
+
+- ALB deploys code to 8080 listener  and if everything works fine, upgrades that to 80 
+
+- After successful deployment, waits for "1" minute and terminates the old task 
+
+
+

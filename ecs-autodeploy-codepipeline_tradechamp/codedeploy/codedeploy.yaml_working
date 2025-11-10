@@ -1,0 +1,107 @@
+# File: codedeploy.yaml 
+# This module creates codedeploy project and roles 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" 
+# and "Secrets manager" values 
+#
+# Resource that would be created
+# 1) CodeDeploy project  
+# 2) CodeDeploy Deployment group 
+# 
+
+Description: "Create CodeDeploy project and deployment group"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  perm2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm2
+  
+  ec2StackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: ec2
+          
+  albStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: alb
+
+  autoscaleStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: autoscale
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Resources:
+  # Create CodeDeploy Application    
+  # Inputs: 
+  #  From Parameter store
+  #  1) codedeploy application name  
+  # 
+  myCodeDeployProject: 
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}' 
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+  # Create CodeDeploy Deployment group ]    
+  # Inputs: 
+  # 1) codedeploy application reference
+  # 2) codedeploy service role reference (from Permissions Stack)
+  # 3) EC2 tag name 
+  # 
+  myDeployGroup: 
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      DeploymentGroupName: mydeploygroup 
+      ApplicationName: !Ref myCodeDeployProject
+      ServiceRoleArn: 
+        Fn::ImportValue: 
+           Fn::Sub: "${perm2StackName}-CODEDEPLOY-SERVICE-ROLE-ARN"
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      Ec2TagFilters: 
+       - Key: Name 
+         Value:  
+           Fn::ImportValue: 
+             Fn::Sub: "${ec2StackName}-PUBLIC-INSTANCE-NAME"
+         Type: "KEY_AND_VALUE"
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "app "] ]
+       - Key: Environment
+         Value: !Sub ${environment}
+
+Outputs:
+  CodeDeployGroup:
+    Value: !Ref myDeployGroup
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-DEPLOY-GROUP"
+  #
+  CodeDeployProject:
+    Value: !Ref myCodeDeployProject
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-DEPLOY-PROJECT"
