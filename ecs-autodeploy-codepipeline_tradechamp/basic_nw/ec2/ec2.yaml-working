@@ -1,0 +1,112 @@
+Description: "Spinup few servers for testing"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Conditions: 
+  createOnlyProdResources: 
+    !Equals [ !Ref environment, "dev" ] 
+
+Resources:
+  publicInstance:
+    Description: "Open to public access, on http port 80"
+    Type: AWS::EC2::Instance
+    Condition: createOnlyProdResources
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'
+      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'
+      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+      SecurityGroupIds:
+         - Fn::ImportValue:
+            Fn::Sub: "${permStackName}-PUBLIC-SG" 
+      SubnetId:
+         Fn::ImportValue:
+            Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      UserData:
+        Fn::Base64:
+          !Sub | 
+            #!/bin/bash -x 
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd.service
+            systemctl enable httpd.service
+            echo Going to create index.html 
+            ls -lrt /var/log 
+            echo "Hello World from $(hostname -f)" > /var/www/html/index.html
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "Public Instance "] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+         
+  privateInstance:
+    Description: "Open to private access, on http port 8080"
+    Type: AWS::EC2::Instance
+    Condition: createOnlyProdResources
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'
+      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'
+      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+      SecurityGroupIds:
+         - Fn::ImportValue:
+            Fn::Sub: "${permStackName}-PRIVATE-SG" 
+      SubnetId:
+         Fn::ImportValue:
+            Fn::Sub: "${networkStackName}-PRIVATE-SUBNET1"
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      UserData:
+        Fn::Base64:
+          !Sub | 
+            #!/bin/bash -x 
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd.service
+            systemctl enable httpd.service
+            echo Going to create index.html 
+            ls -lrt /var/log 
+            echo "Hello World from $(hostname -f)" > /var/www/html/index.html
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [!Sub "${AWS::StackName}", "Private Instance" , "hello"]  ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+
+Outputs:
+  PublicInstance:
+    Condition: createOnlyProdResources
+    Value: !Ref publicInstance
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-PUBLIC-INSTANCE"
+
+  PrivateInstance:
+    Condition: createOnlyProdResources
+    Value: !Ref privateInstance
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-PRIVATE-INSTANCE"
+

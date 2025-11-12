@@ -1,0 +1,298 @@
+# File: codebuild.yaml 
+# This module create all the codebuild project and roles 
+#
+# Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values
+#
+# Resource that would be created
+# 1) Codebuild bucket 
+# 2) Codebuild project   
+# 3) Codebuild project for ECS  
+# 4) Github creds 
+# 5) CustoBucketCleanup resource 
+# 6) Store the new bucket name in "parameter store" with name "/dev/codebuild/bucket_name"
+
+Description: "Create CodeBuild Projects"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+  codebuildProjectName:
+    Description: springdemo
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: springdemo
+
+  tradechamp:
+     Description: tradechamp
+     Type: String
+     MinLength: 1
+     MaxLength: 255
+     Default: tradechamp
+          
+Resources:
+    # Create CodeBuild Bucket for storing build artifacts    
+    # Inputs: 
+    #  From Parameter store
+    #  1) codebuild build prefix  
+    #   
+  codebuildBucket:
+    Description: "Create S3 bucket for storing codebuild artifacts"
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join ["-", [!Sub '{{resolve:ssm:/${environment}/codebuild/bucket_prefix}}', !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]] ]]
+      
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "bucket "] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+  # 
+  storeBucketValueInParameterStore:
+    Description: "Store bucket value in parameter store"
+    Type: AWS::SSM::Parameter
+    Properties:
+      Value: !Ref codebuildBucket
+      Name: "/dev/codebuild/bucket_name"
+      #### *** This is not working for some reason
+      #Name: !Join ["/", [ !Sub "${environment}", "codebuild", "bucket_name" ]]
+      Type: String 
+  # 
+  # Get Git Credentials from secrets manager 
+  # 
+  myCreds:
+    Type: AWS::CodeBuild::SourceCredential
+    Properties:
+        AuthType: '{{resolve:ssm:/secrets/git/auth_type}}'
+        ServerType: '{{resolve:ssm:/secrets/git/server_type}}'
+        Token: '{{resolve:ssm:/secrets/git/token}}'
+        Username: '{{resolve:ssm:/secrets/git/username}}'
+  
+
+   # Create CodeBuild Project to perform maven build 
+   # Also enable cloudwatch logs 
+   #   
+   # Inputs: 
+   
+   #  1) CodeBuild bucket name 
+   #  2) Git Credentials  
+   #  3) CodeBuild Service Role 
+   #  
+   #  Build environment Information like: 
+   #  4) Build Image (its an aws docker image)
+   #  5) Compute Type (small)
+   #  6) Image Type (linux container)
+   #  
+   #  From Parameter store
+   #  7) codebuild project name
+   #  8) Source code Git Repository   
+   #     
+  codebuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+     Name: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}' 
+     Description: some build info 
+
+     Source: 
+       Type: GITHUB
+       Location: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo}}'
+       GitCloneDepth: 1
+       BuildSpec: !Sub '{{resolve:ssm:/${environment}/codebuild/buildspec_file_name_ec2}}'
+       Auth:
+          Resource: !Ref myCreds
+          Type: OAUTH
+
+     Artifacts: 
+        Type: S3
+        Location: !Sub arn:aws:s3:::${codebuildBucket}
+        EncryptionDisabled: True
+
+     ServiceRole:   
+        Fn::ImportValue: 
+          Fn::Sub: "${permStackName}-CODEBUILD-SERVICE-ROLE-ARN"
+
+     Environment: # use Ubuntu standard v7
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
+
+     LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: "build-logs"
+          StreamName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+  
+   # Create CodeBuild Project2 to perform maven build 
+   # For ECS option where docker image is built and pushed to ECR
+   # Also enable cloudwatch logs 
+   #   
+   # Inputs: 
+   
+   #  1) CodeBuild bucket name 
+   #  2) Git Credentials  
+   #  3) CodeBuild Service Role 
+   #  
+   #  Build environment Information like: 
+   #  4) Build Image (its an aws docker image)
+   #  5) Compute Type (small)
+   #  6) Image Type (linux container)
+   #  
+   #  From Parameter store
+   #  7) codebuild project name
+   #  8) Source code Git Repository   
+   #     
+  codebuildProjectForECS:
+    Type: AWS::CodeBuild::Project
+    Properties:
+     Name: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name_ecs}}' 
+     Description: some build info 
+
+     Source: 
+       Type: GITHUB
+       Location: !Sub '{{resolve:ssm:/${environment}/codebuild/git_repo}}'
+       GitCloneDepth: 1
+       BuildSpec: !Sub '{{resolve:ssm:/${environment}/codebuild/buildspec_file_name_ecs}}'
+       Auth:
+          Resource: !Ref myCreds
+          Type: OAUTH
+
+     Artifacts: 
+        Type: S3
+        Location: !Sub arn:aws:s3:::${codebuildBucket}
+        EncryptionDisabled: True
+
+     ServiceRole:   
+        Fn::ImportValue: 
+          Fn::Sub: "${permStackName}-CODEBUILD-SERVICE-ROLE-ARN"
+
+     Environment: # use Ubuntu standard v7
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+
+     LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: "build-logs"
+          StreamName: !Sub '{{resolve:ssm:/${environment}/codebuild/project_name}}'
+
+   # Create CodeBuild Project to perform maven build 
+   # Also enable cloudwatch logs 
+   #   
+   # Inputs: 
+   
+   #  1) CodeBuild bucket name 
+   #  2) Git Credentials  
+   #  3) CodeBuild Service Role 
+   #  
+   #  Build environment Information like: 
+   #  4) Build Image (its an aws docker image)
+   #  5) Compute Type (small)
+   #  6) Image Type (linux container)
+   #  
+   #  From Parameter store
+   #  7) codebuild project name
+   #  8) Source code Git Repository   
+   #     
+  codebuildProjectForTradeChamp:
+    Type: AWS::CodeBuild::Project
+    Properties:
+     Name: !Sub '{{resolve:ssm:/${environment}/codebuild/${tradechamp}/project_name}}' 
+     Description: some build info 
+
+     Source: 
+       Type: GITHUB
+       Location: !Sub '{{resolve:ssm:/${environment}/codebuild/${tradechamp}/git_repo}}'
+       GitCloneDepth: 1
+       BuildSpec: !Sub '{{resolve:ssm:/${environment}/codebuild/${tradechamp}/buildspec}}'
+       Auth:
+          Resource: !Ref myCreds
+          Type: OAUTH
+
+     Artifacts: 
+        Type: S3
+        Location: !Sub arn:aws:s3:::${codebuildBucket}
+        EncryptionDisabled: True
+
+     ServiceRole:   
+        Fn::ImportValue: 
+          Fn::Sub: "${permStackName}-CODEBUILD-SERVICE-ROLE-ARN"
+
+     Environment: # use Ubuntu standard v7
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: "aws/codebuild/amazonlinux-x86_64-standard:5.0" 
+
+     LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: "build-logs"
+          StreamName: !Sub '{{resolve:ssm:/${environment}/codebuild/${tradechamp}/project_name}}'
+                
+  # Custom resource to empty S3 CodeBuild bucket 
+  # Inputs:
+  # 1) CodeBuild Bucket reference 
+  # 2) S3-Lambda Funcation Role ARN (created in Perm stack) 
+  # 
+  customBucketCleanupResource:
+    Type: 'AWS::CloudFormation::CustomResource'
+    Properties:
+      ServiceToken:  
+        Fn::ImportValue: 
+          Fn::Sub: ${permStackName}-CLEANUP-BUCKET-FUNCTION-ARN
+      BucketName: !Ref codebuildBucket 
+
+# Outputs     
+# 1) Code Build bucket 
+# 2) Code Build project 
+# 3) Git Credentials 
+# 
+Outputs:
+  BucketName:
+    Value: !Ref codebuildBucket
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-CODEBUILD-BUCKET"
+
+
+  ProjectName:
+    Value: !Ref codebuildProject
+    Export:
+      "Name" :
+        !Sub "${AWS::StackName}-CODEBUILD-PROJECT"
+
+  ProjectNameForECS:
+    Value: !Ref codebuildProjectForECS
+    Export:
+      "Name" :
+        !Sub "${AWS::StackName}-CODEBUILD-PROJECT-ECS"
+
+  ProjectNameTradechamp:
+    Value: !Ref codebuildProjectForTradeChamp
+    Export:
+      "Name" :
+        !Sub "${AWS::StackName}-CODEBUILD-PROJECT-TRADECHAMP"
+       
+              
+  MyCreds:
+    Value: !Ref myCreds
+    Export:
+      "Name" :
+        !Sub "${AWS::StackName}-MYCREDS"
+
+

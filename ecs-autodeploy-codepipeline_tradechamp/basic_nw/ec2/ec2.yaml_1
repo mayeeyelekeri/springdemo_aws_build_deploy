@@ -1,0 +1,114 @@
+Description: "Spinup few servers for testing"
+
+Parameters: 
+  networkStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: nw
+
+  permStackName:
+    Description: Name of the base stack with all network resources
+    Type: String
+    Default: perm
+
+  environment: 
+    Type: String 
+    Default: dev 
+    AllowedValues: 
+      - dev
+      - prod 
+
+Conditions: 
+  createOnlyProdResources: 
+    !Equals [ !Ref environment, "dev" ] 
+
+Resources:
+  ec2InstanceProfile:
+    Description: "EC2 instance profile for codedeploy" 
+    Type: AWS::IAM::InstanceProfile 
+    Properties: 
+      Path: "/" 
+      Roles: 
+        - 
+          Ref: myInstanceRole 
+
+  myInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: s3accesspolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+
+  publicInstance:
+    Description: "Open to public access, on http port 80"
+    Type: AWS::EC2::Instance
+    Condition: createOnlyProdResources
+    Properties:
+      ImageId: !Sub '{{resolve:ssm:/${environment}/ec2/ami_id}}'
+      KeyName: !Sub '{{resolve:ssm:/${environment}/ec2/keyname}}'
+      InstanceType: !Sub '{{resolve:ssm:/${environment}/ec2/instance_type}}'
+      IamInstanceProfile: !Ref myInstanceRole
+      SecurityGroupIds:
+         - Fn::ImportValue:
+            Fn::Sub: "${permStackName}-PUBLIC-SG" 
+      SubnetId:
+         Fn::ImportValue:
+            Fn::Sub: "${networkStackName}-PUBLIC-SUBNET1"
+      VpcId: 
+         Fn::ImportValue: 
+           Fn::Sub: "${networkStackName}-VPCID"
+
+      UserData:
+        Fn::Base64:
+          !Sub | 
+            #!/bin/bash -x 
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd.service
+            systemctl enable httpd.service
+            echo Going to create index.html 
+            ls -lrt /var/log 
+            echo "Hello World from $(hostname -f)" > /var/www/html/index.html
+        
+            sudo yum update -y
+            sudo yum install ruby wget  docker -y
+            sudo wget https://aws-codedeploy-us-east-1.s3.us-east-1.amazonaws.com/latest/install
+            sudo chmod +x ./install
+            sudo ./install auto
+            sudo systemctl start codedeploy-agent
+            sudo systemctl status codedeploy-agent
+            sudo usermod -aG docker ec2-user
+            sudo systemctl start docker
+
+
+      Tags:
+       - Key: Name
+         Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "PublicInstance"] ]
+       - Key: Environment
+         Value: !Sub ${environment}	
+         
+Outputs:
+  PublicInstance:
+    Condition: createOnlyProdResources
+    Value: !Ref publicInstance
+    Export:
+      "Name" :
+        Fn::Sub: "${AWS::StackName}-PUBLIC-INSTANCE"
+
+

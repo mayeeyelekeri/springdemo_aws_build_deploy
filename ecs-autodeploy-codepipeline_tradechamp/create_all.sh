@@ -7,9 +7,9 @@ SECONDS=0
 sudo /home/vagrant/scripts/clock_reset.sh
 
 # Create the basis stack (will create network permissions alb codebuild)  
-(cd ../basic_nw && ./create_all.sh) 
+#(cd basic_nw && ./create_all.sh) 
 
-dirs=(permissions2 lambda alb ecs codedeploy codepipeline) 
+dirs=(permissions2 alb ecs ) 
 
 # Change into each directory and execute create stack script 
 for i in "${dirs[@]}"

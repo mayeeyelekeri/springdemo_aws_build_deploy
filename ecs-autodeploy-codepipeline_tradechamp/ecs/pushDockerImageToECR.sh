@@ -1,7 +1,7 @@
 #!/bin/bash 
 
 echo "inside pushImageto repo script" 
-repository_name="springdemo"
+repository_name="tradechamp"
 region="us-east-1"
 
 ## Create the repository 

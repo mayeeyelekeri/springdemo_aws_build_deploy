@@ -3,7 +3,7 @@
 #
 # Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 
 # And also creates an ECR repository 
-# And uploades existing docker image "springdemo" onto ECR 
+# And uploades existing docker image "tradechamp" onto ECR 
 # And make sure both the Network and Permissions modules are created 
 #
 # Resource that would be created
@@ -11,7 +11,7 @@
 # 2) ECS Task Definition  
 # 3) ECS Service 
 
-Description: "ECS Cluster for springdemo application"
+Description: "ECS Cluster for tradechamp application"
 
 Parameters: 
   networkStackName:
@@ -40,6 +40,12 @@ Parameters:
     AllowedValues: 
       - dev
         
+  projectName: 
+    Type: String 
+    Default: tradechamp 
+    AllowedValues: 
+      - tradechamp
+        
 Conditions: 
   createOnlyProdResources: 
     !Equals [ !Ref environment, "dev" ] 
@@ -59,7 +65,7 @@ Resources:
     Description: "New ECS Cluster"                        
     Type: AWS::ECS::Cluster
     Properties:                                                                  
-     ClusterName: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}'              
+     ClusterName: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/cluster_name}}'              
      CapacityProviders: 
        - FARGATE
      ClusterSettings: 
@@ -88,7 +94,7 @@ Resources:
     Description: "ECS task definition" 
     Type: AWS::ECS::TaskDefinition
     Properties:                                                                  
-     Family: !Sub '{{resolve:ssm:/${environment}/ecs/task_name}}'
+     Family: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/task_name}}'
      RequiresCompatibilities: 
        - FARGATE
      ExecutionRoleArn: 
@@ -98,10 +104,10 @@ Resources:
      Cpu: 1 vCPU 
      NetworkMode: awsvpc
      ContainerDefinitions: 
-       - Name: !Sub '{{resolve:ssm:/${environment}/ecs/container_name}}'
-         Image: !Sub '{{resolve:ssm:/${environment}/ecs/ecr_repository}}'
+       - Name: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/container_name}}'
+         Image: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/ecr_repository}}'
          PortMappings: 
-           - ContainerPort: 80
+           - ContainerPort: 8080
              Protocol: tcp 
          Environment: 
             - Name: WELCOME_MESSAGE
@@ -136,8 +142,8 @@ Resources:
     Type: 'AWS::ECS::Service'
     DependsOn: ecsCluster
     Properties:
-      ServiceName: !Sub '{{resolve:ssm:/${environment}/ecs/service_name}}'  
-      Cluster: !Sub '{{resolve:ssm:/${environment}/ecs/cluster_name}}' 
+      ServiceName: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/service_name}}'  
+      Cluster: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/cluster_name}}' 
       SchedulingStrategy: REPLICA
       DesiredCount: 1
       CapacityProviderStrategy:
@@ -158,8 +164,8 @@ Resources:
                Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
                
       LoadBalancers: 
-        - ContainerName: !Sub '{{resolve:ssm:/${environment}/ecs/container_name}}'
-          ContainerPort: 80
+        - ContainerName: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/container_name}}'
+          ContainerPort: 8080
           LoadBalancerName:
              Ref: "AWS::NoValue"
           TargetGroupArn:

@@ -1,0 +1,62 @@
+{
+    "projects": [
+        {
+            "name": "tradechamp",
+            "arn": "arn:aws:codebuild:us-east-1:252689085451:project/tradechamp",
+            "source": {
+                "type": "GITHUB",
+                "location": "https://github.com/mayeeyelekeri/tradechamp.git",
+                "gitCloneDepth": 1,
+                "gitSubmodulesConfig": {
+                    "fetchSubmodules": false
+                },
+                "reportBuildStatus": false,
+                "insecureSsl": false
+            },
+            "secondarySources": [],
+            "secondarySourceVersions": [],
+            "artifacts": {
+                "type": "S3",
+                "location": "codebuild-12d41766d7f3",
+                "path": "",
+                "namespaceType": "NONE",
+                "name": "tradechamp",
+                "packaging": "NONE",
+                "overrideArtifactName": false,
+                "encryptionDisabled": false
+            },
+            "secondaryArtifacts": [],
+            "cache": {
+                "type": "NO_CACHE"
+            },
+            "environment": {
+                "type": "LINUX_CONTAINER",
+                "image": "aws/codebuild/amazonlinux-x86_64-standard:5.0",
+                "computeType": "BUILD_GENERAL1_MEDIUM",
+                "environmentVariables": [],
+                "privilegedMode": false,
+                "imagePullCredentialsType": "CODEBUILD"
+            },
+            "serviceRole": "arn:aws:iam::252689085451:role/codeBuildProjectRole",
+            "timeoutInMinutes": 60,
+            "queuedTimeoutInMinutes": 480,
+            "encryptionKey": "arn:aws:kms:us-east-1:252689085451:alias/aws/s3",
+            "tags": [],
+            "created": "2025-11-10T01:57:15.734000+00:00",
+            "lastModified": "2025-11-10T01:57:15.734000+00:00",
+            "badge": {
+                "badgeEnabled": false
+            },
+            "logsConfig": {
+                "cloudWatchLogs": {
+                    "status": "ENABLED"
+                },
+                "s3Logs": {
+                    "status": "DISABLED",
+                    "encryptionDisabled": false
+                }
+            },
+            "projectVisibility": "PRIVATE"
+        }
+    ],
+    "projectsNotFound": []
