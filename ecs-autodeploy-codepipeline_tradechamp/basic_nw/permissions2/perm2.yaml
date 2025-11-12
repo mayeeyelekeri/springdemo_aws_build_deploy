@@ -1,4 +1,4 @@
-# File: perm.yaml 
+# File: perm2.yaml 
 # This module create all the "permissions" related to extended modules  
 #
 # Before executing this, make sure "init.sh" is called which would create all "Parameter Store" values 

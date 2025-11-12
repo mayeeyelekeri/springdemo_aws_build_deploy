@@ -6,7 +6,7 @@
 # 
 # Resource that would be created
 # 1) Listener on port 80 
-# 2) Target Group based on the application port (mostly 80)  
+# 2) Target Group based on the application port (mostly 8080)  
 # 3) Application Load Balancer 
 
 Description: "Create Application Load Balancer"
@@ -89,12 +89,7 @@ Resources:
         Fn::ImportValue: 
          Fn::Sub: "${networkStackName}-VPCID"
       TargetType: ip 
-      
-      # ***** Testing, no need to attach targets here 
-      Targets: 
-        - Id: 
-            Fn::ImportValue: 
-                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
+
       Tags:
         - Key: Name
           Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupGreen"]]

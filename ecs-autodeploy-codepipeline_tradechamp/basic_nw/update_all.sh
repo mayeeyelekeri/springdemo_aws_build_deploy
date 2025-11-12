@@ -1,7 +1,7 @@
 #!/bin/bash 
 
 SECONDS=0
-dirs=(network permissions utils ec2 codebuild) 
+dirs=(network permissions codebuild) 
 
 # Change into each directory and execute update stack script 
 for i in "${dirs[@]}"

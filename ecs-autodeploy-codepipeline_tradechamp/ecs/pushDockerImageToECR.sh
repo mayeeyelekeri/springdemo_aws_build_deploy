@@ -5,7 +5,7 @@ repository_name="tradechamp"
 region="us-east-1"
 
 ## Create the repository 
-aws ecr create-repository --repository-name $repository_name
+#aws ecr create-repository --repository-name $repository_name
  
 # -- Get specific values of the repository and remove quotes (double quotes are there in the beginning and end) 
 uri=`aws ecr  describe-repositories --repository-name $repository_name --query repositories[0].repositoryUri`
@@ -31,11 +31,11 @@ echo "output of login: $output"
  
 ##  -- Tag an ECR image to push 
 ##  docker tag e9ae3c220b23 <aws_account_id>.dkr.ecr.<region>.amazonaws.com/<repository_name>:tag
-docker tag $repository_name $aws_account_id.dkr.ecr.us-east-1.amazonaws.com/$repository_name
+docker tag $repository_name:latest $aws_account_id.dkr.ecr.us-east-1.amazonaws.com/$repository_name:latest
  
 ##  -- Push image to repository 
 ##  docker push <aws_account_id>.dkr.ecr.<region>.amazonaws.com/<repository>:tag
-docker push $aws_account_id.dkr.ecr.us-east-1.amazonaws.com/$repository_name
+docker push $aws_account_id.dkr.ecr.us-east-1.amazonaws.com/$repository_name:latest
 
 ## Add a new parameter with the repository Path
 aws ssm put-parameter \

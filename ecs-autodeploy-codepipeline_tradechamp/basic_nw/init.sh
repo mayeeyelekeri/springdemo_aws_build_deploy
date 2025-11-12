@@ -16,7 +16,7 @@ sudo /home/vagrant/scripts/clock_reset.sh
 echo environment is $environment 
 ./network/init.sh $1
 ./permissions/init.sh $1
-./codebuild/init.sh $1
+./permissions2/init.sh $1
 
 start=$(date +%s) 
 echo "Elapsed Time: $(($SECONDS / 60)) minutes and $(($SECONDS % 60)) seconds"

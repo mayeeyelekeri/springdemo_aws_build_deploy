@@ -1,5 +1,0 @@
-- Deploy an application into Amazon ECS using CodeDeploy: 
-   https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-ecs-deployment.html
-
-- Deploy an application into Amazon ECS using CodePipeline 
-  https://docs.aws.amazon.com/codepipeline/latest/userguide/ecs-cd-pipeline.html 
