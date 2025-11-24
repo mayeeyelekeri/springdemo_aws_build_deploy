@@ -24,5 +24,9 @@ aws cloudformation wait stack-create-complete --stack-name codebuild
        exit -1
  fi
 
+ # Start the build
+#projectName=`aws ssm get-parameter --name "/dev/codebuild/tradechamp/project_name"  --with-decryption  --output text --query Parameter.Value`
+#aws codebuild start-build --project-name $projectName
+
 # To pass different environment information 
 # ./create_stack.sh --parameters ParameterKey=environment,ParameterValue=prod

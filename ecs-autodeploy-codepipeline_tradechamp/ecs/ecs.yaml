@@ -114,6 +114,24 @@ Resources:
               Value: !Sub '{{resolve:ssm:/secrets/git/token}}'
             - Name: IP_ADDRESS
               Value: "10.0.0.0"
+            - Name: MYSQL_USER 
+              Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.username}}'
+            - Name: MYSQL_PASSWORD 
+              Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.password}}'
+            - Name: MYSQL_HOST 
+              Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.url}}'
+            - Name: MYSQL_DATABASE 
+              Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.database}}'
+            - Name: MYSQL_PORT 
+              Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.port}}'
+         LogConfiguration:
+            LogDriver: awslogs 
+            Options: 
+               awslogs-group: /ecs/tradechamp-logs 
+               awslogs-region: us-east-1
+               awslogs-stream-prefix: tradechamp
+               awslogs-create-group: true 
+               mode: non-blocking
 
      Tags:
        - Key: Name
@@ -136,7 +154,7 @@ Resources:
   # 
   #   4) Security Group information from the "permissions" stack
   #   5) Public Subnet 1 information from the "network" stack 
-  #   6) ALB Target Group reference from the "alb" stack 
+  #   6) ALB Target Group reference from the "alb" stack  (optional)
   # 
   ecsService:
     Type: 'AWS::ECS::Service'
@@ -163,14 +181,14 @@ Resources:
             - Fn::ImportValue: 
                Fn::Sub: "${networkStackName}-PUBLIC-SUBNET2"
                
-      LoadBalancers: 
-        - ContainerName: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/container_name}}'
-          ContainerPort: 8080
-          LoadBalancerName:
-             Ref: "AWS::NoValue"
-          TargetGroupArn:
-             Fn::ImportValue: 
-               Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE"
+      #LoadBalancers: 
+      #  - ContainerName: !Sub '{{resolve:ssm:/${environment}/ecs/${projectName}/container_name}}'
+      #    ContainerPort: 8080
+      #    LoadBalancerName:
+      #       Ref: "AWS::NoValue"
+      #    TargetGroupArn:
+      #       Fn::ImportValue: 
+      #         Fn::Sub: "${albStackName}-TARGET-GROUP-BLUE"
                
       TaskDefinition: !Ref ecsTaskDefinition
       PlatformVersion: LATEST
@@ -178,10 +196,10 @@ Resources:
       # 
       # ****** Integration with CodeDeploy, have a problem for BLUE-GREEN 
       # 
-      DeploymentController:
-          Type: CODE_DEPLOY
-      ServiceConnectConfiguration:
-          Enabled: false
+      #DeploymentController:
+      #    Type: CODE_DEPLOY
+      #ServiceConnectConfiguration:
+      #    Enabled: false
               
       Tags:
        - Key: Name

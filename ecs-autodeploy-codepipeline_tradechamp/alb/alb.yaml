@@ -61,11 +61,6 @@ Resources:
          Fn::Sub: "${networkStackName}-VPCID"
       TargetType: ip 
       
-      # ***** Testing, no need to attach targets here 
-      Targets: 
-        - Id: 
-            Fn::ImportValue: 
-                Fn::Sub: "${ec2StackName}-INSTANCE-PRIVATE-IP"
       Tags:
         - Key: Name
           Value: !Join [" - ", [Fn::Sub: "${AWS::StackName}", "TargetGroupBlue"]]

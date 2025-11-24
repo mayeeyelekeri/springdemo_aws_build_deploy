@@ -289,6 +289,18 @@ Resources:
                    - ecs:ExecuteCommand
                Resource: "*"     
                
+       - PolicyName: "CloudWatchFullAccess"
+         PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+             -
+               Effect: "Allow"
+               Action:
+                   - logs:*
+                   - cloudwatch:GenerateQuery
+                   - cloudwatch:GenerateQueryResultsSummary
+               Resource: "*"     
+               
   lambdaRole:
       Type: AWS::IAM::Role
       Properties:

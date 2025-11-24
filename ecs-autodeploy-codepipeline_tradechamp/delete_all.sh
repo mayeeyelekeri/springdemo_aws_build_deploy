@@ -2,7 +2,7 @@
 
 SECONDS=0
 
-dirs=(ecs alb codebuild)
+dirs=(ecs codebuild)
 
 # Change into each directory and execute delete stack script
 for i in "${dirs[@]}"
