@@ -124,6 +124,8 @@ Resources:
               Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.database}}'
             - Name: MYSQL_PORT 
               Value: !Sub '{{resolve:ssm:/secrets/db/spring.datasource.port}}'
+            - Name: ACTIVE_PROFILE 
+              Value: "aws"
          LogConfiguration:
             LogDriver: awslogs 
             Options: 
